@@ -128,3 +128,21 @@ def test_cdr_index_matches_region_labels(sample):
     for loop, positions in idx.items():
         for p in positions:
             assert m.labels[p * 3] == loop
+
+
+def test_epitope_notes_match_the_actual_sequence():
+    """Residue identities quoted in an epitope note must be real."""
+    import re
+
+    ag = antigen.hen_egg_lysozyme()
+    for ep in ag.epitopes:
+        # Residue codes are single letters followed by a position inside
+        # the epitope span; accession numbers and platform names are not.
+        for aa, pos in re.findall(r"\b([ACDEFGHIKLMNPQRSTVWY])(\d{1,3})\b", ep.notes):
+            pos = int(pos)
+            if not (ep.start <= pos <= ep.end):
+                continue
+            assert ag.sequence[pos - 1] == aa, (
+                f"{ep.name} note claims {aa}{pos} but P00698 has "
+                f"{ag.sequence[pos - 1]}{pos}"
+            )
