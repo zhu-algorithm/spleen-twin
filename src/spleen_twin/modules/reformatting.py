@@ -9,7 +9,8 @@ all.  Three designs are represented:
   murine, so the BCR still signals through the mouse Ig-alpha/Ig-beta
   sheath and class-switches normally.  The variable region is harvested
   and cloned onto a human constant region after the fact.  Used by
-  VelocImmune, Kymouse, RenMab and OmniRat.
+  VelocImmune, Kymouse, RenMab, OmniRat and AlivaMab (the platforms
+  listed in :data:`REVERSE_CHIMERIC_PLATFORMS`).
 
 * **Fully humanised constant region in vivo.**  XenoMouse carries
   megabase human Ig loci in which the mouse constant region is itself

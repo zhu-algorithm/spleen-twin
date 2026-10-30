@@ -102,8 +102,9 @@ def hen_egg_lysozyme(dose_nm: float = 10.0) -> Antigen:
     # A contiguous surface stretch spanning the HyHEL-5 contact region.
     ag.add_epitope(
         "HyHEL5_region", 41, 60,
-        notes="contiguous surface patch overlapping the HyHEL-5 footprint "
-              "(R45, N46, T47, D48, G49, S50, T51, Q53)",
+        notes="contiguous surface patch overlapping the HyHEL-5 footprint; "
+              "residues present in this span, as they occur in P00698: "
+              "R45, N46, T47, D48, G49, S50, T51, D52, Y53",
     )
     # The HyHEL-10 footprint, used as a second, independent target.
     ag.add_epitope(

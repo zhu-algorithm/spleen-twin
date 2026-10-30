@@ -13,7 +13,12 @@ industrially and returns a tier rather than a number:
    No published model predicts all eight properties at clinical-grade
    accuracy; the panel exists so the twin's output funnel has the same
    *shape* as a real campaign's, with attrition where real attrition
-   happens.  Thresholds follow commonly quoted industrial criteria:
+   happens.
+
+Two distinct criterion sets are applied, and they should not be conflated.
+
+**Eight-dimension property panel** — the predictive dimensions, each with
+a commonly quoted industrial threshold:
 
    ===========================  ==================================
    dimension                    threshold
@@ -23,13 +28,23 @@ industrially and returns a tier rather than a number:
    aggregation                  < 5% at 100 mg/mL
    viscosity                    < 20 cP at 150 mg/mL
    immunogenicity               < 5 predicted MHC-II epitopes
-   thermal stability            Tm > 65 °C (lowest domain >= 58 °C)
+   thermal stability            Tm > 65 °C
    solubility                   > 50 mg/mL
    manufacturability            > 1 g/L CHO titre
    ===========================  ==================================
 
-   Monomer content >= 90% and pI in 6.0-9.0 are applied as additional
-   release-style criteria.
+**Release-style criteria** — a separate, measurement-oriented set with its
+own, lower stability bar:
+
+   ===========================  ==================================
+   nanoDSF lowest-domain Tm     >= 58 °C
+   monomer content              >= 90%
+   isoelectric point            6.0 - 9.0
+   ===========================  ==================================
+
+The two stability numbers differ on purpose: 65 °C is the property-panel
+target, 58 °C the lowest-domain floor below which a candidate is rejected
+outright.  Falling between them is a warning, not a failure.
 """
 
 from __future__ import annotations
@@ -60,21 +75,30 @@ LIABILITY_MOTIFS = {
     "tryptophan_oxidation": r"W",
 }
 
-#: Thresholds of the eight-dimension panel.
-THRESHOLDS = {
+#: The eight predictive dimensions and their industrial thresholds.
+PROPERTY_PANEL = {
     "kd_molar": 1e-9,
     "cross_reactivity": 0.10,
     "aggregation_pct": 5.0,
     "viscosity_cp": 20.0,
     "mhcii_epitopes": 5,
     "tm_celsius": 65.0,
-    "tm_lowest_domain": 58.0,
     "solubility_mg_ml": 50.0,
     "titre_g_l": 1.0,
+}
+
+#: Release-style measurement criteria, applied alongside the property
+#: panel.  ``tm_lowest_domain`` is the nanoDSF floor, deliberately lower
+#: than the property panel's 65 C target.
+RELEASE_CRITERIA = {
+    "tm_lowest_domain": 58.0,
     "monomer_pct": 90.0,
     "pi_low": 6.0,
     "pi_high": 9.0,
 }
+
+#: Convenience union of both criterion sets.
+THRESHOLDS = {**PROPERTY_PANEL, **RELEASE_CRITERIA}
 
 
 @dataclass
@@ -202,10 +226,12 @@ class DevelopabilityPanel:
         # Only unpaired cysteines beyond the two canonical ones are a liability.
         liabilities["free_cysteine"] = max(0, liabilities["free_cysteine"] - 2)
 
-        # Heuristic property estimates.  Each is anchored so that a median
-        # human germline paratope (patch == 0) sits comfortably inside the
-        # industrial threshold, and degrades with excess hydrophobicity,
-        # charge imbalance and predicted instability.
+        # Heuristic property estimates.  `patch` here is the calibrated
+        # deviation above the germline baseline, so patch == 0 means "a
+        # median human germline paratope" (whose raw score is ~0.5, not 0).
+        # Each estimate is anchored to sit comfortably inside the
+        # industrial threshold at patch == 0, and degrades with excess
+        # hydrophobicity, charge imbalance and predicted instability.
         tm = 71.0 - 3.2 * patch - 0.22 * max(0.0, instability - 38.0)
         aggregation = 1.8 + 1.5 * patch + 0.05 * max(0.0, abs(charge) - 8.0)
         viscosity = 9.0 + 3.6 * patch + 0.9 * max(0.0, abs(charge) - 6.0)
@@ -259,4 +285,4 @@ class DevelopabilityPanel:
 
 
 __all__ = ["DevelopabilityPanel", "DevelopabilityReport", "Tier",
-           "THRESHOLDS", "LIABILITY_MOTIFS"]
+           "THRESHOLDS", "PROPERTY_PANEL", "RELEASE_CRITERIA", "LIABILITY_MOTIFS"]
