@@ -153,6 +153,33 @@ spleen = Spleen(oracle=MyStructuralOracle())
 reformatter = ReformattingModule(platform="XenoMouse")
 ```
 
+## Atlas grounding
+
+Organ composition is measured, not assumed. `spleen_twin.organ.load_reference()`
+returns the human spleen slice of CELLxGENE Census 2025-11-08
+(`tissue_general == 'spleen' and is_primary_data == True`): **577,677 cells,
+58 donors, 7 datasets, 110 annotated cell types, all from tissue annotated
+`normal`**.
+
+| measured quantity | value | used for |
+|---|---|---|
+| B lineage, all states | 32.8% of spleen | scale of the follicular compartment |
+| naive-like B | 11.14% | founder pool size |
+| memory B | 8.99% | exit split sanity check |
+| plasma cells | 5.48% | antibody output compartment |
+| Tfh | 1.23% | **Tfh per naive B = 0.110**, which sets light-zone help competition |
+| germinal-centre B | 0.06% | negative control — GCs are induced, not resting |
+
+`AtlasReference.gc_parameters(n_founders)` turns those into germinal-centre
+settings, so the single most consequential parameter — how many centrocytes
+can be rescued per cycle — comes from data rather than from tuning.
+
+**What was not extracted:** the per-cell-type expression matrix. The 77-gene
+panel in `scripts/fetch_spleen_census.py` resolves cleanly, but reading
+expression for scattered cell coordinates out of a 159-million-cell SOMA array
+did not finish in the session that built this package. No module depends on it;
+running the script end to end regenerates it.
+
 ## Limitations
 
 - Heavy chain only by default. Light chains rearrange (`ChainRecombinator("IGK")`) but are not paired into the affinity model; receptor editing is therefore disabled by default.
