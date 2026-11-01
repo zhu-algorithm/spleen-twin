@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>虚拟脾脏 · AI 模拟抗体生成与亲和力成熟</title>
+<style>
+:root{
+  --ink:#10212e; --ink2:#44586a; --mute:#8295a5; --line:#dde5ec; --bg:#fbfcfd; --card:#fff;
+  --deep:#1b4965; --mid:#5fa8d3; --pale:#9fd3e8; --red:#c1121f; --green:#2a9d8f;
+  --orange:#e76f51; --grey:#8d99ae; --amber:#d99a05;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.75 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;}
+code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+a{color:var(--deep)}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+
+header.hero{background:linear-gradient(170deg,#10212e,#1b4965 60%,#2a6f97);color:#fff;padding:72px 0 56px}
+header.hero h1{margin:0 0 14px;font-size:38px;line-height:1.25;letter-spacing:-.4px}
+header.hero p.lede{margin:0 0 26px;max-width:760px;font-size:17px;color:#cfe3ef}
+.badges{display:flex;flex-wrap:wrap;gap:8px}
+.badge{background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.22);
+  padding:5px 11px;border-radius:999px;font-size:12.5px;color:#eaf4fa}
+
+nav.toc{position:sticky;top:0;z-index:50;background:rgba(251,252,253,.93);
+  backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+nav.toc .wrap{display:flex;gap:4px;overflow-x:auto;padding-top:9px;padding-bottom:9px}
+nav.toc a{padding:6px 11px;border-radius:7px;font-size:13px;color:var(--ink2);
+  text-decoration:none;white-space:nowrap}
+nav.toc a:hover{background:#eaf1f6;color:var(--deep)}
+
+section{padding:52px 0;border-bottom:1px solid var(--line)}
+section h2{font-size:25px;margin:0 0 6px;letter-spacing:-.2px}
+section h2 .num{color:var(--mid);font-variant-numeric:tabular-nums;margin-right:10px;font-weight:600}
+section .sub{color:var(--ink2);margin:0 0 26px;max-width:800px}
+h3{font-size:16px;margin:30px 0 10px}
+p{margin:0 0 14px}
+.note{color:var(--ink2);font-size:13.5px}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin:18px 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:820px){.grid2,.grid3{grid-template-columns:1fr}}
+
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.stat .v{font-size:26px;font-weight:650;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.stat .k{font-size:12.5px;color:var(--mute);margin-top:2px}
+.stat .d{font-size:12px;color:var(--ink2);margin-top:6px}
+
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--mute);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.4px}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:600}
+.pill.A{background:#dff3ee;color:#1d6f63}
+.pill.B{background:#fdf0d8;color:#8a6200}
+.pill.C{background:#fbe0e2;color:#9b1119}
+
+.ctrl{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin:14px 0}
+.ctrl label{font-size:13px;color:var(--ink2);display:flex;align-items:center;gap:8px}
+.ctrl input[type=range]{width:180px;accent-color:var(--deep)}
+button{font:inherit;font-size:13.5px;padding:7px 15px;border-radius:8px;cursor:pointer;
+  border:1px solid var(--line);background:#fff;color:var(--ink)}
+button.primary{background:var(--deep);border-color:var(--deep);color:#fff}
+button:hover{border-color:var(--mid)}
+.val{font-variant-numeric:tabular-nums;font-weight:600;color:var(--deep);min-width:68px;display:inline-block}
+
+svg{display:block;max-width:100%}
+.seqbox{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;line-height:1.9;
+  word-break:break-all;background:#f5f8fa;border:1px solid var(--line);border-radius:8px;padding:12px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--ink2);margin:8px 0 2px}
+.legend i{width:11px;height:11px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:-1px}
+
+.callout{border-left:3px solid var(--mid);background:#f2f8fc;padding:13px 17px;border-radius:0 8px 8px 0;margin:16px 0}
+.callout.warn{border-left-color:var(--amber);background:#fdf8ec}
+.callout b{color:var(--deep)}
+.callout.warn b{color:#8a6200}
+
+.pipe{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin:22px 0}
+@media(max-width:820px){.pipe{grid-template-columns:repeat(2,1fr)}}
+.step{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--mid);
+  border-radius:9px;padding:11px 13px;font-size:13px}
+.step b{display:block;font-size:13.5px;margin-bottom:3px}
+.step span{color:var(--mute);font-size:12px}
+
+footer{padding:40px 0 64px;color:var(--ink2);font-size:13.5px}
+.tag{font-size:11.5px;color:var(--mute);letter-spacing:.5px;text-transform:uppercase;font-weight:600}
+</style>
+</head>
+<body>
+
+<header class="hero"><div class="wrap">
+  <div class="tag" style="color:#8fc4de">spleen-twin · 数字孪生脾脏</div>
+  <h1>在计算机里长出一条抗体</h1>
+  <p class="lede">这不是一个"预测抗体"的模型。它把脾脏里真实发生的事——抗原呈递、V(D)J 重排、免疫耐受筛除、生发中心的突变与选择——一步步实现出来，然后让抗体<b>自己</b>在这个循环里变好。下面每一个数字和每一张图，都来自一次真实运行的模拟。</p>
+  <div class="badges">
+    <span class="badge">真实人类 IGH 胚系片段</span>
+    <span class="badge">S5F 突变模型 · 1024 个五聚体</span>
+    <span class="badge">577,677 个人类脾脏细胞标定</span>
+    <span class="badge">开源 MIT</span>
+  </div>
+</div></header>
+
+<nav class="toc"><div class="wrap">
+  <a href="#overview">流程总览</a>
+  <a href="#antigen">抗原与表位</a>
+  <a href="#vdj">V(D)J 重排</a>
+  <a href="#tolerance">耐受筛除</a>
+  <a href="#shm">体细胞高频突变</a>
+  <a href="#gc">生发中心</a>
+  <a href="#selection">选择机制</a>
+  <a href="#lineage">谱系树</a>
+  <a href="#output">抗体产出</a>
+  <a href="#loop">闭环</a>
+  <a href="#methods">方法与出处</a>
+</div></nav>
+
+<section id="overview"><div class="wrap">
+  <h2><span class="num">01</span>流程总览</h2>
+  <p class="sub">一次免疫应答被拆成可独立替换的模块。抗原从左边进来，抗体从右边出去；中间最关键的是生发中心那个循环，它会跑几十轮。</p>
+  <div class="pipe">
+    <div class="step"><b>① 抗原呈递</b><span>树突状细胞摄取 → MHC-II 展示<br>FDC 保留完整抗原</span></div>
+    <div class="step"><b>② T 细胞帮助</b><span>CD4⁺ 启动 → Tfh 分化<br>决定后续帮助容量</span></div>
+    <div class="step"><b>③ V(D)J 重排</b><span>RAG 切割 · 外切酶修剪<br>P/N 核苷酸 → naive 库</span></div>
+    <div class="step"><b>④ 耐受筛除</b><span>前 BCR 检查点<br>删除 · 失能</span></div>
+    <div class="step"><b>⑤ B 细胞活化</b><span>BCR 信号阈值<br>进入滤泡</span></div>
+    <div class="step"><b>⑥ 暗区</b><span>增殖 + AID 突变</span></div>
+    <div class="step"><b>⑦ 亮区</b><span>抢抗原 · 抢 Tfh 帮助<br>抢不到就凋亡</span></div>
+    <div class="step"><b>⑧ 类别转换</b><span>IgM → IgG/IgA/IgE</span></div>
+    <div class="step"><b>⑨ 产出</b><span>浆细胞分泌抗体<br>记忆 B 细胞留存</span></div>
+    <div class="step"><b>⑩ 可开发性</b><span>八维门控 → A/B/C 判级</span></div>
+  </div>
+  <div class="callout"><b>关键一句：</b>代码里没有任何一处在"优化亲和力"。亲和力上升是⑥⑦两步反复跑出来的副产品——这正是真实免疫系统的做法。</div>
+  <div class="grid3" id="headline"></div>
+</div></section>
+
+<section id="antigen"><div class="wrap">
+  <h2><span class="num">02</span>抗原与表位</h2>
+  <p class="sub">用的是鸡蛋溶菌酶（UniProt P00698），生发中心生物学的经典模型抗原。序列是从 UniProt 真实取回的，不是编的。</p>
+  <div class="card">
+    <div class="legend">
+      <span><i style="background:var(--deep)"></i>被选为靶点的表位</span>
+      <span><i style="background:#dde5ec"></i>抗原其余部分</span>
+    </div>
+    <div class="seqbox" id="agseq"></div>
+    <p class="note" id="agnote" style="margin-top:12px"></p>
+  </div>
+  <h3>抗原加工：哪些肽段能被 MHC-II 呈递</h3>
+  <p>树突状细胞把抗原切碎，能稳定嵌进 MHC-II 凹槽的肽段才会被展示给 CD4⁺ T 细胞。打分看的是 P1/P4/P6/P9 四个锚定位点的疏水性。</p>
+  <div class="card"><div id="mhcii"></div>
+    <p class="note" style="margin-top:10px">这是一个<b>排序启发式</b>，用来在同一个抗原内部比较肽段的相对优劣，不是表位预测工具。</p></div>
+</div></section>
+
+<section id="vdj"><div class="wrap">
+  <h2><span class="num">03</span>V(D)J 重排：抗体多样性从哪来</h2>
+  <p class="sub">每个 B 细胞随机挑一个 V、一个 D、一个 J 片段拼起来。真正制造多样性的不是挑片段，而是拼接处发生的事：两端被啃掉几个碱基、补上回文 P 核苷酸、再由 TdT 随意塞进一段 N 核苷酸。</p>
+  <div class="card">
+    <div class="tag">本次模拟中优势克隆的重排过程</div>
+    <div id="junction" style="margin-top:14px"></div>
+    <div class="legend" style="margin-top:12px">
+      <span><i style="background:var(--deep)"></i>V 片段</span>
+      <span><i style="background:var(--green)"></i>D 片段</span>
+      <span><i style="background:var(--mid)"></i>J 片段</span>
+      <span><i style="background:var(--orange)"></i>N 核苷酸（TdT 随机添加）</span>
+      <span><i style="background:var(--amber)"></i>P 核苷酸（发夹打开形成的回文）</span>
+      <span><i style="background:#e8edf1"></i>被外切酶啃掉</span>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3 style="margin-top:0">读框是随机的</h3>
+      <p>拼接处插入的碱基数是随机的，所以只有约 <b>1/3</b> 的重排恰好落在正确读框里。错码的那些会产生终止密码子，细胞直接死掉。</p>
+      <div id="framepie"></div></div>
+    <div class="card"><h3 style="margin-top:0">从重排到可用的 naive 细胞</h3>
+      <p>这是一个漏斗。每一级损耗都是真实存在的生物学检查点。</p>
+      <div id="funnel"></div></div>
+  </div>
+</div></section>
+
+<section id="tolerance"><div class="wrap">
+  <h2><span class="num">04</span>免疫耐受：先删掉会打自己的</h2>
+  <p class="sub">一个随机生成的抗体很可能会结合自身蛋白。未成熟 B 细胞要先过自身筛查：结合太强的被删除，中等的被"失能"（活着但不能参战），剩下的才成为可用的 naive 细胞。</p>
+  <div class="card">
+    <div id="tolbar"></div>
+    <p class="note" style="margin-top:12px">阈值不是随手设的。对整条自身蛋白做滑窗取最佳配准是<b>极值统计</b>，绝对 K<sub>D</sub> 阈值没有可迁移性，所以阈值按朴素库自反应性分布的分位数标定到 Wardemann et al. (<i>Science</i> 2003) 实测的人类中枢耐受比例。</p>
+  </div>
+</div></section>
+
+<section id="shm"><div class="wrap">
+  <h2><span class="num">05</span>体细胞高频突变：AID 在哪里下手</h2>
+  <p class="sub">AID 酶不是均匀地打。它偏好特定的序列上下文（WRCY / RGYW 热点）。模型用 S5F 五聚体模型决定每个位点被突变的概率——这是从 806,860 个真实沉默突变里推断出来的。</p>
+  <div class="card">
+    <div class="tag">优势克隆 V 区每个位点的可变性（S5F）</div>
+    <div id="s5f" style="margin-top:10px"></div>
+    <div class="legend">
+      <span><i style="background:#fde2e4"></i>CDR（互补决定区，直接接触抗原）</span>
+      <span><i style="background:#eef2f5"></i>FR（框架区，负责折叠）</span>
+    </div>
+    <p class="note" id="s5fnote" style="margin-top:10px"></p>
+  </div>
+  <div class="callout warn"><b>容易搞错的一点：</b>模型<b>没有</b>人为给 CDR 加突变偏好。真实库里看到的 CDR 突变富集，主要是下游<b>选择</b>造成的，不是 AID 更爱打 CDR。如果在 targeting 里再加一次，就是重复计数。</div>
+</div></section>
+
+<section id="gc"><div class="wrap">
+  <h2><span class="num">06</span>生发中心：一轮一轮地变好</h2>
+  <p class="sub">这是整个系统的心脏。暗区里细胞分裂并突变，亮区里它们争夺 FDC 上的抗原和有限的 Tfh 帮助——抢到的活下来继续循环，抢不到的凋亡。拖动下面的进度条，看 30 轮里发生了什么。</p>
+  <div class="card">
+    <div class="ctrl">
+      <button id="play" class="primary">▶ 播放</button>
+      <label>周期 <input type="range" id="cyc" min="1" max="30" value="1"><span class="val" id="cycv">1 / 30</span></label>
+    </div>
+    <div class="grid2" style="margin-top:4px">
+      <div><div class="tag">群体亲和力分布</div><div id="hist"></div></div>
+      <div><div class="tag">暗区 → 亮区 → 去向</div><div id="flow"></div></div>
+    </div>
+    <div class="grid3" style="margin-top:16px" id="gcstats"></div>
+    <div style="margin-top:18px"><div class="tag">克隆组成（每条色带是一个克隆）</div><div id="clones"></div></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3 style="margin-top:0">突变累积的位置会分化</h3>
+      <div id="cdrfr"></div>
+      <p class="note">按区段长度归一化后，CDR 的每位点替换突变率明显高于框架区。<b>这是选择做出来的</b>——框架区突变会被折叠稳定性罚分清除。</p></div>
+    <div class="card"><h3 style="margin-top:0">克隆多样性坍缩</h3>
+      <div id="divchart"></div>
+      <p class="note">起始是几十上百个克隆各自为战，最后往往只剩少数几个。真实生发中心也是寡克隆的。</p></div>
+  </div>
+</div></section>
+
+<section id="selection"><div class="wrap">
+  <h2><span class="num">07</span>选择机制：为什么抗原必须被消耗掉</h2>
+  <p class="sub">这一节是整个模型里最要紧的部分。亮区里 B 细胞能抢到多少抗原，服从 Langmuir 占据率——而它的半饱和点正好落在 K<sub>D</sub> = [抗原] 上。自己拖动下面的滑块试试。</p>
+  <div class="card">
+    <div class="ctrl">
+      <label>FDC 抗原浓度 [Ag] <input type="range" id="agslider" min="-11" max="-7" step="0.05" value="-8.7"><span class="val" id="agv"></span></label>
+      <label>竞争锐度 β <input type="range" id="bslider" min="0.5" max="3" step="0.1" value="1.6"><span class="val" id="bv">1.6</span></label>
+    </div>
+    <div class="grid2">
+      <div><div class="tag">抗原捕获量 A</div><div id="langmuir"></div></div>
+      <div><div class="tag">亲和力每提高 10 倍带来的选择优势</div><div id="gradient"></div></div>
+    </div>
+    <p class="note" style="margin-top:12px">把选择优势求导出来是 <code>d ln π / d(−x) = β · ln10 · (1 − A)</code>。梯度正比于 <b>(1 − A)</b>：一旦捕获饱和，再提高亲和力什么都买不到，<b>选择就瞎了</b>。所以模型让抗原随应答被消耗（每轮 ×0.90），把"还能分辨的亲和力窗口"不断往更紧的方向推。</p>
+  </div>
+  <div class="callout warn"><b>实测结果，含一个反向结论：</b>30 轮后，恒定抗原下领先克隆的选择压力只剩初始的 <b>51%</b>，衰减抗原则守住了 ~100%；最佳克隆 2.96 nM（衰减）vs 6.85 nM（恒定）。<b>但</b>群体<b>中位数</b>反而是恒定抗原略好。抗原受限把顶端竞争磨得更锋利，同时把中间层砍得更狠——你要单个最佳克隆还是要一个宽 panel，取舍不同。</div>
+</div></section>
+
+<section id="lineage"><div class="wrap">
+  <h2><span class="num">07.5</span>谱系树：一个克隆的家谱</h2>
+  <p class="sub">优势克隆的所有后代，按累积突变数展开。横轴是离胚系有多远，颜色是亲和力。越往右走，颜色越深——这就是亲和力成熟在序列上的样子。</p>
+  <div class="card">
+    <div id="tree"></div>
+    <div class="legend" id="treelegend"></div>
+    <p class="note" id="treenote"></p>
+  </div>
+</div></section>
+
+<section id="output"><div class="wrap">
+  <h2><span class="num">08</span>抗体产出与可开发性</h2>
+  <p class="sub">浆细胞分泌抗体进入血清。注意看：滴度在涨的同时，抗体的<b>质量</b>也在涨——这正是亲和力成熟的定义。</p>
+  <div class="card"><div class="tag">血清抗体滴度与平均亲和力</div><div id="serum"></div></div>
+  <h3>候选分子与八维可开发性门控</h3>
+  <p>光有亲和力不够。真实项目大多死在可制造性、稳定性和安全性上，所以孪生输出的是<b>判级</b>而不只是一个数字。</p>
+  <div class="card" style="overflow-x:auto"><table id="leads"></table>
+    <p class="note" style="margin-top:12px">这些是<b>基于序列的启发式门控</b>，不是性质预测器。没有任何已发表模型能在临床级精度上同时预测这八项。它们的作用是让产出漏斗的<b>形状</b>贴近真实战役——在真实项目会折损的地方折损。</p>
+  </div>
+</div></section>
+
+<section id="loop"><div class="wrap">
+  <h2><span class="num">09</span>闭环：让模型越用越准</h2>
+  <p class="sub">孪生产出数据 → 训练模型 → 模型提设计 → 回灌测量 → 数据再回流。真实世界里这个环断在哪？断在"数据回流"那一步。</p>
+  <div class="card"><div id="loopdiag"></div></div>
+  <div class="grid3">
+    <div class="card"><h3 style="margin-top:0">元数据不全就拒收</h3><p class="note">动物编号、免疫程序、抗原批次与构象、测定条件、拟合模型、原始记录指针——缺一条就拒收，不做插补。动力学测定（SPR/BLI）和平衡测定（ELISA/KinExA）的数字绝不混用。</p></div>
+    <div class="card"><h3 style="margin-top:0">阴性数据必须留</h3><p class="note">不结合的、表达差的、可开发性不过的，才是教会模型"悬崖在哪"的标签。本次运行最终数据里 <b>72%</b> 是阴性样本。丢掉它们是闭环停止复利的首要原因。</p></div>
+    <div class="card"><h3 style="margin-top:0">每轮都跑非 AI 基线</h3><p class="note">AIntibody 盲测中，29 个机构 511 条 AI 设计抗体，非 AI 的共识基线击败了除两家之外的所有参赛者。不跑基线，就无法知道模型到底有没有贡献。</p></div>
+  </div>
+  <div class="callout"><b>训练集怎么切也是陷阱：</b>生发中心里的"兄弟姐妹"序列只差几个突变。按序列随机切分会把近乎重复的样本同时放进训练和测试，所有指标都会虚高。这里按<b>谱系</b>切分。</div>
+</div></section>
+
+<section id="methods"><div class="wrap">
+  <h2><span class="num">10</span>方法、出处与边界</h2>
+  <p class="sub">哪些是真实数据、哪些是已发表参数、哪些是我设的旋钮——分清楚很重要。</p>
+  <div class="card" style="overflow-x:auto"><table id="prov"></table></div>
+  <div class="callout warn"><b>最大的一条限制：亲和力函数是适应度函数，不是结合预测器。</b> 目前没有任何方法能从序列准确预测真实 K<sub>D</sub> 来驱动成熟模拟。它提供的是一个平滑、有上位效应、会饱和、动态范围正确的 landscape，所有数值都应读作"模拟 K<sub>D</sub>"。代码里留了 <code>AffinityOracle</code> 接口，可以换成真实结构预测方法。</div>
+  <h3>其他边界</h3>
+  <ul class="note">
+    <li>默认只建重链。轻链可以重排，但尚未配对进亲和力模型，因此受体编辑默认关闭。</li>
+    <li>MHC-II 呈递是凹槽贴合启发式，只用于同一抗原内部排序，不是表位预测工具。</li>
+    <li>单个生发中心对中性标记（如同种型）是漂变主导的；要看群体层面的同种型分布需要跑多个生发中心。</li>
+    <li>有两个罕见 IGHV 等位基因没有 IMGT-gapped 参考，标记为未标注而不是猜一个。</li>
+    <li>脾脏图谱只提取了细胞组成；按细胞类型的表达矩阵未完成提取，任何模块都不依赖它。</li>
+  </ul>
+</div></section>
+
+<footer><div class="wrap">
+  <p><b>spleen-twin</b> · MIT 开源 · <a href="https://github.com/zhu-algorithm/spleen-twin">github.com/zhu-algorithm/spleen-twin</a></p>
+  <p class="note" id="footnote"></p>
+</div></footer>
+
+<script id="simdata" type="application/json">{"meta": {"seed": 20261030, "antigen": "HEL", "antigen_source": "sp|P00698|LYSC_CHICK Lysozyme C OS=Gallus gallus OX=9031 GN=LYZ PE=1 SV=1", "antigen_len": 129, "antigen_seq": "KVFGRCELAAAMKRHGLDNYRGYSLGNWVCAAKFESNFNTQATNRNTDGSTDYGILQINSRWWCNDGRTPGSRNLCNIPCSALLSSDITASVNCAKKIVSDGNGMNAWVAWRNRCKGTDVQAWIRGCRL", "epitope": {"name": "HyHEL5_region", "start": 41, "end": 60, "seq": "QATNRNTDGSTDYGILQINS", "notes": "contiguous surface patch overlapping the HyHEL-5 footprint; residues present in this span, as they occur in P00698: R45, N46, T47, D48, G49, S50, T51, D52, Y53"}}, "repertoire": {"attempted": 36515, "productive": 7426, "productive_fraction": 0.20336847870738053, "annotated": 7288, "deleted": 3945, "anergic": 1343, "naive": 2000}, "tolerance_calibration": {"n_sampled": 500, "delete_threshold_log10_kd": -8.42728245810445, "anergy_threshold_log10_kd": -8.122840870768167, "target_deleted_fraction": 0.55, "target_anergic_fraction": 0.2}, "developability_calibration": {"n_sampled": 800, "patch_reference": 0.4951656524678837, "patch_spread": 0.11693404634581106}, "presentation": {"fdc_antigen_nm": 1.9250000000000003, "mhcii_capacity": 0.8454555957266802, "top_peptides": [{"start": 69, "peptide": "TPGSRNLCNIPCSAL", "core": "LCNIPCSAL", "score": 14.88}, {"start": 70, "peptide": "PGSRNLCNIPCSALL", "core": "LCNIPCSAL", "score": 14.88}, {"start": 71, "peptide": "GSRNLCNIPCSALLS", "core": "LCNIPCSAL", "score": 14.88}, {"start": 72, "peptide": "SRNLCNIPCSALLSS", "core": "LCNIPCSAL", "score": 14.88}, {"start": 73, "peptide": "RNLCNIPCSALLSSD", "core": "LCNIPCSAL", "score": 14.88}, {"start": 74, "peptide": "NLCNIPCSALLSSDI", "core": "LCNIPCSAL", "score": 14.88}, {"start": 75, "peptide": "LCNIPCSALLSSDIT", "core": "LCNIPCSAL", "score": 14.88}, {"start": 1, "peptide": "KVFGRCELAAAMKRH", "core": "FGRCELAAA", "score": 12.58}]}, "tfh": {"n": 192, "quality": 0.8454555957266802, "help_per_tfh": 0.9227277978633401}, "atlas": {"source": "CELLxGENE Census 2025-11-08", "value_filter": "tissue_general == 'spleen' and is_primary_data == True", "n_cells": 577677, "n_donors": 58, "n_datasets": 7, "n_cell_types": 110, "all_disease_normal": true, "assays": {"10x 5' v2": 186490, "10x 3' v2": 143566, "10x 3' v3": 111173, "10x 5' v1": 104615, "microwell-seq": 15806, "sci-RNA-seq3": 13180, "Smart-seq2": 2847}, "cell_type_counts": {"memory B cell": 51953, "B cell": 36535, "fibroblast": 34459, "naive B cell": 32660, "natural killer cell": 31412, "macrophage": 24710, "classical monocyte": 22290, "plasma cell": 21225, "naive thymus-derived CD4-positive, alpha-beta T cell": 17965, "CD16-positive, CD56-dim natural killer cell, human": 17439, "neutrophil": 16610, "follicular B cell": 16286, "CD16-negative, CD56-bright natural killer cell, human": 15627, "CD8-positive, alpha-beta T cell": 14397, "B-2 B cell": 14262, "CD4-positive, alpha-beta T cell": 13823, "central memory CD4-positive, alpha-beta T cell": 12889, "effector memory CD8-positive, alpha-beta T cell, terminally differentiated": 11996, "endothelial cell": 11920, "effector memory CD4-positive, alpha-beta T cell": 10285, "monocyte": 9492, "T follicular helper cell": 7108, "CD4-positive, alpha-beta memory T cell": 7034, "naive thymus-derived CD8-positive, alpha-beta T cell": 6782, "CD8-positive, alpha-beta memory T cell": 6305, "megakaryocyte": 6285, "unknown": 5770, "T cell": 5661, "effector memory CD8-positive, alpha-beta T cell": 5552, "gamma-delta T cell": 5421, "plasmablast": 5044, "activated CD8-positive, alpha-beta T cell": 5009, "CD8-positive, alpha-beta memory T cell, CD45RO-positive": 4984, "hematopoietic cell": 4487, "B-1 B cell": 4440, "CD4-positive, CD25-positive, alpha-beta regulatory T cell": 4212, "erythrocyte": 3666, "dendritic cell": 3648, "mucosal invariant T cell": 3378, "regulatory T cell": 3285, "lymphocyte": 3134, "endothelial cell of vascular tree": 3061, "group 3 innate lymphoid cell": 2770, "IgM plasma cell": 2488, "innate lymphoid cell": 2433, "immature innate lymphoid cell": 1950, "stromal cell": 1948, "IgG plasma cell": 1799, "non-classical monocyte": 1705, "mature B cell": 1635, "CD8-alpha alpha positive, gamma-delta intraepithelial T cell": 1620, "myeloid cell": 1178, "immature B cell": 1162, "conventional dendritic cell": 1106, "plasmacytoid dendritic cell": 1098, "mature NK T cell": 1029, "effector memory CD4-positive, alpha-beta T cell, terminally differentiated": 902, "megakaryocyte-erythroid progenitor cell": 864, "vascular associated smooth muscle cell": 796, "mast cell": 794, "alpha-beta T cell": 703, "mesothelial cell": 606, "myofibroblast cell": 603, "CD4-positive helper T cell": 571, "erythroblast": 439, "intermediate monocyte": 396, "central memory CD8-positive, alpha-beta T cell": 388, "germinal center B cell": 375, "granulocyte": 373, "progenitor cell": 353, "hematopoietic stem cell": 304, "fraction A pre-pro B cell": 278, "promonocyte": 233, "pro-B cell": 204, "small pre-B-II cell": 198, "CD8-alpha-alpha-positive, alpha-beta intraepithelial T cell": 192, "platelet": 133, "double-positive, alpha-beta thymocyte": 133, "common myeloid progenitor": 126, "promyelocyte": 118, "granulocyte monocyte progenitor cell": 116, "early lymphoid progenitor": 115, "Kupffer cell": 115, "large pre-B-II cell": 103, "late pro-B cell": 102, "hematopoietic precursor cell": 68, "erythroid progenitor cell": 66, "hematopoietic multipotent progenitor cell": 60, "myelocyte": 54, "erythroid lineage cell": 48, "group 1 innate lymphoid cell": 45, "group 2 innate lymphoid cell": 40, "alveolar macrophage": 38, "enteroendocrine cell": 33, "cord blood hematopoietic stem cell": 31, "glial cell": 23, "epithelial cell": 22, "common dendritic progenitor": 20, "dendritic cell, human": 19, "myeloid dendritic cell": 17, "smooth muscle cell": 13, "pre-conventional dendritic cell": 7, "double negative thymocyte": 5, "neuron": 3, "Langerhans cell": 2, "basophil": 2, "professional antigen presenting cell": 2, "interstitial cell of Cajal": 2, "precursor B cell": 1, "eurydendroid cell": 1}, "compartments": {"b_naive_like": 64370, "b_memory": 51953, "b_germinal_center": 375, "b_marginal_zone": 4440, "plasma": 31654, "b_precursor": 320, "b_unlabelled": 36535, "b_total": 189647, "tfh": 7108, "professional_apc": 63364}, "fractions_of_spleen": {"b_total": 0.3282924540876649, "b_naive_like": 0.11142905118258127, "b_memory": 0.08993434047053976, "plasma": 0.05479532680027074, "b_germinal_center": 0.0006491516885733723, "b_marginal_zone": 0.007685955992708728, "tfh": 0.012304453873012081, "professional_apc": 0.10968759358603511}, "derived_ratios": {"tfh_per_naive_b": 0.11042411061053285, "tfh_per_total_b": 0.03748016050873465, "memory_per_plasma": 1.6412775636570418, "memory_per_naive": 0.8070995805499456, "gc_fraction_of_b": 0.001977357933423677}, "notes": ["Resting human spleen contains very few germinal-centre B cells (0.06% of all cells); germinal centres form on immunisation.", "Ratios are steady-state abundances, not production rates: memory and plasma compartments differ in lifespan."]}, "bins": [-11.0, -10.75, -10.5, -10.25, -10.0, -9.75, -9.5, -9.25, -9.0, -8.75, -8.5, -8.25, -8.0, -7.75, -7.5, -7.25, -7.0, -6.75, -6.5, -6.25, -6.0, -5.75, -5.5, -5.25, -5.0, -4.75, -4.5], "cycles": [{"t": 1, "antigen_molar": 1.9250000000000003e-09, "n_entering": 150, "n_after_division": 1131, "n_selected": 1131, "n_apoptosis": 0, "n_stop": 69, "plasma_out": 51, "memory_out": 171, "best": -7.4105313685836185, "median": -6.113816078724936, "mut": 1.0308030803080308, "cdrR": 0.23982398239823982, "frR": 0.528052805280528, "n_clones": 150, "top_clone_frac": 0.0088008800880088, "shannon": 4.989708706868116, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 10, 8, 25, 140, 474, 218, 30, 0, 0, 0, 0], "top_clones": [{"id": 21, "n": 8}, {"id": 23, "n": 8}, {"id": 28, "n": 8}, {"id": 66, "n": 8}, {"id": 68, "n": 8}, {"id": 82, "n": 8}, {"id": 83, "n": 8}, {"id": 86, "n": 8}], "isotypes": {"IgM": 816, "IgG3": 14, "IgG1": 44, "IgA1": 12, "IgG2": 12, "IgG4": 7, "IgE": 4}}, {"t": 2, "antigen_molar": 1.7325000000000004e-09, "n_entering": 909, "n_after_division": 1783, "n_selected": 1500, "n_apoptosis": 283, "n_stop": 35, "plasma_out": 86, "memory_out": 218, "best": -7.41505549253472, "median": -6.124452329116389, "mut": 1.2801003344481605, "cdrR": 0.318561872909699, "frR": 0.6086956521739131, "n_clones": 150, "top_clone_frac": 0.010869565217391304, "shannon": 4.955942454599941, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 17, 15, 39, 193, 645, 260, 23, 0, 0, 0, 0], "top_clones": [{"id": 37, "n": 13}, {"id": 127, "n": 13}, {"id": 3, "n": 12}, {"id": 19, "n": 12}, {"id": 21, "n": 12}, {"id": 52, "n": 12}, {"id": 62, "n": 12}, {"id": 75, "n": 12}], "isotypes": {"IgG1": 105, "IgM": 975, "IgE": 6, "IgG3": 35, "IgA1": 30, "IgG2": 39, "IgG4": 6}}, {"t": 3, "antigen_molar": 1.5592500000000004e-09, "n_entering": 1196, "n_after_division": 2364, "n_selected": 1500, "n_apoptosis": 864, "n_stop": 28, "plasma_out": 102, "memory_out": 231, "best": -7.41505549253472, "median": -6.168330105283961, "mut": 1.4490145672664954, "cdrR": 0.3838903170522708, "frR": 0.6401028277634961, "n_clones": 146, "top_clone_frac": 0.015424164524421594, "shannon": 4.839388023794349, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 20, 28, 54, 249, 623, 171, 15, 1, 0, 0, 0], "top_clones": [{"id": 27, "n": 18}, {"id": 75, "n": 18}, {"id": 80, "n": 18}, {"id": 108, "n": 18}, {"id": 19, "n": 17}, {"id": 37, "n": 17}, {"id": 68, "n": 17}, {"id": 121, "n": 17}], "isotypes": {"IgM": 837, "IgE": 10, "IgG3": 54, "IgG1": 160, "IgG4": 14, "IgA1": 39, "IgG2": 53}}, {"t": 4, "antigen_molar": 1.4033250000000004e-09, "n_entering": 1167, "n_after_division": 2289, "n_selected": 1500, "n_apoptosis": 789, "n_stop": 45, "plasma_out": 97, "memory_out": 215, "best": -7.41505549253472, "median": -6.209378751112721, "mut": 1.7045454545454546, "cdrR": 0.5244107744107744, "frR": 0.6759259259259259, "n_clones": 138, "top_clone_frac": 0.02441077441077441, "shannon": 4.6947123591819775, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 29, 45, 86, 298, 589, 127, 6, 0, 0, 0, 0], "top_clones": [{"id": 37, "n": 29}, {"id": 29, "n": 26}, {"id": 108, "n": 26}, {"id": 80, "n": 24}, {"id": 121, "n": 24}, {"id": 138, "n": 22}, {"id": 143, "n": 21}, {"id": 75, "n": 20}], "isotypes": {"IgM": 767, "IgE": 5, "IgG3": 77, "IgG1": 199, "IgG4": 19, "IgA1": 46, "IgG2": 75}}, {"t": 5, "antigen_molar": 1.2629925000000004e-09, "n_entering": 1188, "n_after_division": 2344, "n_selected": 1500, "n_apoptosis": 844, "n_stop": 32, "plasma_out": 69, "memory_out": 213, "best": -7.41505549253472, "median": -6.2551675463045076, "mut": 1.9761904761904763, "cdrR": 0.6527093596059114, "frR": 0.7692939244663383, "n_clones": 130, "top_clone_frac": 0.04187192118226601, "shannon": 4.499417886047727, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 42, 73, 136, 351, 497, 105, 2, 0, 0, 0, 0], "top_clones": [{"id": 37, "n": 51}, {"id": 80, "n": 42}, {"id": 29, "n": 40}, {"id": 121, "n": 38}, {"id": 108, "n": 33}, {"id": 143, "n": 32}, {"id": 138, "n": 28}, {"id": 101, "n": 25}], "isotypes": {"IgM": 707, "IgE": 5, "IgG3": 88, "IgA1": 58, "IgG1": 260, "IgG2": 83, "IgG4": 17}}, {"t": 6, "antigen_molar": 1.1366932500000003e-09, "n_entering": 1218, "n_after_division": 2392, "n_selected": 1500, "n_apoptosis": 892, "n_stop": 44, "plasma_out": 73, "memory_out": 200, "best": -7.41505549253472, "median": -6.351168205716517, "mut": 2.2836185819070907, "cdrR": 0.7832110839445803, "frR": 0.8516707416462918, "n_clones": 119, "top_clone_frac": 0.06845965770171149, "shannon": 4.16831129916054, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 18, 67, 111, 211, 385, 379, 56, 0, 0, 0, 0, 0], "top_clones": [{"id": 37, "n": 84}, {"id": 80, "n": 71}, {"id": 29, "n": 66}, {"id": 121, "n": 50}, {"id": 108, "n": 42}, {"id": 143, "n": 42}, {"id": 101, "n": 39}, {"id": 138, "n": 32}], "isotypes": {"IgM": 617, "IgG3": 113, "IgA1": 66, "IgG1": 318, "IgE": 4, "IgG2": 91, "IgG4": 18}}, {"t": 7, "antigen_molar": 1.0230239250000003e-09, "n_entering": 1227, "n_after_division": 2411, "n_selected": 1500, "n_apoptosis": 911, "n_stop": 43, "plasma_out": 223, "memory_out": 66, "best": -7.41505549253472, "median": -6.474567294585073, "mut": 2.6300578034682083, "cdrR": 0.8976052848885219, "frR": 0.9950454170107349, "n_clones": 105, "top_clone_frac": 0.10404624277456648, "shannon": 3.7752913750368493, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 29, 103, 169, 271, 370, 244, 24, 1, 0, 0, 0, 0], "top_clones": [{"id": 37, "n": 126}, {"id": 80, "n": 111}, {"id": 29, "n": 108}, {"id": 121, "n": 61}, {"id": 143, "n": 53}, {"id": 101, "n": 51}, {"id": 108, "n": 38}, {"id": 138, "n": 36}], "isotypes": {"IgM": 528, "IgG3": 142, "IgA1": 81, "IgG1": 345, "IgE": 10, "IgG2": 89, "IgG4": 16}}, {"t": 8, "antigen_molar": 9.207215325000003e-10, "n_entering": 1211, "n_after_division": 2390, "n_selected": 1500, "n_apoptosis": 890, "n_stop": 32, "plasma_out": 235, "memory_out": 66, "best": -7.41505549253472, "median": -6.628393034348271, "mut": 3.0091743119266057, "cdrR": 1.0325271059216012, "frR": 1.1592994161801502, "n_clones": 82, "top_clone_frac": 0.14762301918265222, "shannon": 3.254347388587808, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 37, 155, 245, 337, 295, 126, 4, 0, 0, 0, 0, 0], "top_clones": [{"id": 37, "n": 177}, {"id": 80, "n": 168}, {"id": 29, "n": 159}, {"id": 121, "n": 79}, {"id": 143, "n": 57}, {"id": 101, "n": 54}, {"id": 108, "n": 29}, {"id": 138, "n": 28}], "isotypes": {"IgA1": 81, "IgG1": 354, "IgG3": 162, "IgM": 475, "IgG2": 98, "IgE": 15, "IgG4": 14}}, {"t": 9, "antigen_molar": 8.286493792500003e-10, "n_entering": 1199, "n_after_division": 2358, "n_selected": 1500, "n_apoptosis": 858, "n_stop": 40, "plasma_out": 209, "memory_out": 90, "best": -7.684813280894383, "median": -6.777057322366654, "mut": 3.3671940049958367, "cdrR": 1.138218151540383, "frR": 1.3530391340549541, "n_clones": 61, "top_clone_frac": 0.20649458784346378, "shannon": 2.6996390563556183, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 54, 227, 335, 343, 193, 47, 0, 0, 0, 0, 0, 0], "top_clones": [{"id": 80, "n": 248}, {"id": 29, "n": 242}, {"id": 37, "n": 195}, {"id": 121, "n": 94}, {"id": 101, "n": 54}, {"id": 143, "n": 50}, {"id": 63, "n": 22}, {"id": 108, "n": 19}], "isotypes": {"IgA1": 74, "IgG3": 189, "IgM": 407, "IgG1": 389, "IgG2": 105, "IgE": 19, "IgG4": 18}}, {"t": 10, "antigen_molar": 7.457844413250003e-10, "n_entering": 1201, "n_after_division": 2372, "n_selected": 1500, "n_apoptosis": 872, "n_stop": 30, "plasma_out": 227, "memory_out": 89, "best": -7.85123769325155, "median": -6.86916783791043, "mut": 3.677364864864865, "cdrR": 1.2305743243243243, "frR": 1.4873310810810811, "n_clones": 42, "top_clone_frac": 0.2922297297297297, "shannon": 2.1571319036491543, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3, 83, 325, 389, 270, 97, 16, 0, 0, 0, 0, 0, 0], "top_clones": [{"id": 80, "n": 346}, {"id": 29, "n": 335}, {"id": 37, "n": 167}, {"id": 121, "n": 81}, {"id": 143, "n": 40}, {"id": 101, "n": 37}, {"id": 63, "n": 21}, {"id": 93, "n": 18}], "isotypes": {"IgM": 364, "IgG1": 392, "IgG2": 113, "IgG3": 225, "IgG4": 14, "IgE": 16, "IgA1": 60}}, {"t": 11, "antigen_molar": 6.712059971925003e-10, "n_entering": 1184, "n_after_division": 2335, "n_selected": 1500, "n_apoptosis": 835, "n_stop": 33, "plasma_out": 212, "memory_out": 94, "best": -7.85123769325155, "median": -6.99606547755023, "mut": 4.001675041876047, "cdrR": 1.3927973199329984, "frR": 1.592964824120603, "n_clones": 27, "top_clone_frac": 0.3710217755443886, "shannon": 1.681408465470519, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 6, 117, 442, 404, 185, 36, 3, 0, 0, 0, 0, 0, 0], "top_clones": [{"id": 29, "n": 443}, {"id": 80, "n": 436}, {"id": 37, "n": 121}, {"id": 121, "n": 49}, {"id": 143, "n": 25}, {"id": 101, "n": 20}, {"id": 149, "n": 15}, {"id": 93, "n": 14}], "isotypes": {"IgM": 347, "IgG1": 413, "IgG3": 253, "IgG2": 99, "IgA1": 43, "IgE": 20, "IgG4": 19}}, {"t": 12, "antigen_molar": 6.040853974732503e-10, "n_entering": 1194, "n_after_division": 2349, "n_selected": 1500, "n_apoptosis": 849, "n_stop": 39, "plasma_out": 189, "memory_out": 75, "best": -7.85123769325155, "median": -7.0355353876613105, "mut": 4.266990291262136, "cdrR": 1.529935275080906, "frR": 1.61084142394822, "n_clones": 22, "top_clone_frac": 0.44093851132686085, "shannon": 1.3571397634102074, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 8, 159, 560, 388, 108, 10, 1, 0, 0, 0, 0, 0, 0], "top_clones": [{"id": 29, "n": 545}, {"id": 80, "n": 500}, {"id": 37, "n": 73}, {"id": 121, "n": 25}, {"id": 143, "n": 19}, {"id": 149, "n": 14}, {"id": 93, "n": 9}, {"id": 101, "n": 8}], "isotypes": {"IgG1": 455, "IgG3": 277, "IgM": 322, "IgG4": 21, "IgG2": 97, "IgA1": 43, "IgE": 21}}, {"t": 13, "antigen_molar": 5.436768577259253e-10, "n_entering": 1236, "n_after_division": 2431, "n_selected": 1500, "n_apoptosis": 931, "n_stop": 41, "plasma_out": 243, "memory_out": 74, "best": -7.85123769325155, "median": -7.052602846179526, "mut": 4.4463229078613695, "cdrR": 1.6923076923076923, "frR": 1.5173288250211328, "n_clones": 16, "top_clone_frac": 0.48689771766694845, "shannon": 1.1362732143940466, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 13, 207, 601, 319, 40, 1, 0, 0, 0, 0, 0, 0, 0], "top_clones": [{"id": 29, "n": 576}, {"id": 80, "n": 499}, {"id": 37, "n": 33}, {"id": 143, "n": 14}, {"id": 121, "n": 11}, {"id": 94, "n": 8}, {"id": 122, "n": 8}, {"id": 149, "n": 8}], "isotypes": {"IgG1": 439, "IgM": 267, "IgG2": 88, "IgG3": 303, "IgA1": 43, "IgE": 18, "IgG4": 25}}, {"t": 14, "antigen_molar": 4.893091719533328e-10, "n_entering": 1183, "n_after_division": 2329, "n_selected": 1500, "n_apoptosis": 829, "n_stop": 37, "plasma_out": 216, "memory_out": 82, "best": -7.85123769325155, "median": -7.109345499512061, "mut": 4.582362728785358, "cdrR": 1.9001663893510816, "frR": 1.3985024958402663, "n_clones": 16, "top_clone_frac": 0.5166389351081531, "shannon": 1.0536549441031224, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 18, 286, 605, 265, 24, 1, 0, 0, 0, 0, 0, 0, 0], "top_clones": [{"id": 29, "n": 621}, {"id": 80, "n": 497}, {"id": 37, "n": 18}, {"id": 94, "n": 12}, {"id": 122, "n": 12}, {"id": 143, "n": 11}, {"id": 98, "n": 7}, {"id": 121, "n": 5}], "isotypes": {"IgG1": 425, "IgM": 246, "IgG2": 85, "IgA1": 55, "IgG3": 341, "IgE": 20, "IgG4": 30}}, {"t": 15, "antigen_molar": 4.4037825475799954e-10, "n_entering": 1202, "n_after_division": 2365, "n_selected": 1500, "n_apoptosis": 865, "n_stop": 39, "plasma_out": 224, "memory_out": 72, "best": -7.85123769325155, "median": -7.161260213255121, "mut": 4.897840531561462, "cdrR": 2.1627906976744184, "frR": 1.2998338870431894, "n_clones": 14, "top_clone_frac": 0.5614617940199336, "shannon": 0.973722485691977, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 31, 353, 606, 194, 15, 1, 0, 0, 0, 0, 0, 0, 0], "top_clones": [{"id": 29, "n": 676}, {"id": 80, "n": 459}, {"id": 94, "n": 15}, {"id": 122, "n": 15}, {"id": 143, "n": 14}, {"id": 37, "n": 6}, {"id": 98, "n": 6}, {"id": 121, "n": 4}], "isotypes": {"IgG1": 420, "IgA1": 67, "IgM": 207, "IgG2": 85, "IgG3": 373, "IgE": 18, "IgG4": 34}}, {"t": 16, "antigen_molar": 3.963404292821996e-10, "n_entering": 1204, "n_after_division": 2369, "n_selected": 1500, "n_apoptosis": 869, "n_stop": 39, "plasma_out": 209, "memory_out": 75, "best": -7.85123769325155, "median": -7.166950706344031, "mut": 5.139802631578948, "cdrR": 2.4383223684210527, "frR": 1.199013157894737, "n_clones": 13, "top_clone_frac": 0.5970394736842105, "shannon": 0.977173027679104, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 44, 425, 578, 153, 10, 1, 0, 0, 0, 0, 0, 0, 0], "top_clones": [{"id": 29, "n": 726}, {"id": 80, "n": 410}, {"id": 94, "n": 21}, {"id": 143, "n": 20}, {"id": 122, "n": 15}, {"id": 98, "n": 11}, {"id": 63, "n": 3}, {"id": 121, "n": 3}], "isotypes": {"IgG1": 440, "IgA1": 80, "IgM": 185, "IgG2": 83, "IgE": 14, "IgG4": 34, "IgG3": 380}}, {"t": 17, "antigen_molar": 3.5670638635397966e-10, "n_entering": 1216, "n_after_division": 2396, "n_selected": 1500, "n_apoptosis": 896, "n_stop": 36, "plasma_out": 223, "memory_out": 69, "best": -7.85123769325155, "median": -7.231470366300656, "mut": 5.427980132450331, "cdrR": 2.714403973509934, "frR": 1.0827814569536425, "n_clones": 11, "top_clone_frac": 0.6167218543046358, "shannon": 0.9949409887221148, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 61, 497, 544, 97, 4, 0, 0, 0, 0, 0, 0, 0, 0], "top_clones": [{"id": 29, "n": 745}, {"id": 80, "n": 366}, {"id": 143, "n": 30}, {"id": 94, "n": 21}, {"id": 122, "n": 21}, {"id": 98, "n": 17}, {"id": 63, "n": 4}, {"id": 37, "n": 1}], "isotypes": {"IgG1": 433, "IgA1": 82, "IgM": 157, "IgG2": 84, "IgE": 13, "IgG4": 35, "IgG3": 404}}, {"t": 18, "antigen_molar": 3.210357477185817e-10, "n_entering": 1208, "n_after_division": 2383, "n_selected": 1500, "n_apoptosis": 883, "n_stop": 33, "plasma_out": 217, "memory_out": 81, "best": -7.85123769325155, "median": -7.283633728943818, "mut": 5.710482529118137, "cdrR": 3.0066555740432612, "frR": 1.0282861896838602, "n_clones": 8, "top_clone_frac": 0.6306156405990017, "shannon": 1.044292412399257, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 91, 562, 480, 61, 3, 0, 0, 0, 0, 0, 0, 0, 0], "top_clones": [{"id": 29, "n": 758}, {"id": 80, "n": 314}, {"id": 143, "n": 49}, {"id": 94, "n": 28}, {"id": 98, "n": 23}, {"id": 122, "n": 23}, {"id": 63, "n": 5}, {"id": 37, "n": 2}], "isotypes": {"IgG1": 414, "IgM": 123, "IgG3": 439, "IgG4": 35, "IgE": 11, "IgG2": 96, "IgA1": 84}}, {"t": 19, "antigen_molar": 2.889321729467235e-10, "n_entering": 1202, "n_after_division": 2375, "n_selected": 1500, "n_apoptosis": 875, "n_stop": 29, "plasma_out": 188, "memory_out": 89, "best": -7.85123769325155, "median": -7.28815785289492, "mut": 5.9558462796402285, "cdrR": 3.2698282910874896, "frR": 0.982011447260834, "n_clones": 8, "top_clone_frac": 0.6369582992641046, "shannon": 1.1048439566133175, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 131, 640, 408, 34, 1, 0, 0, 0, 0, 0, 0, 0, 0], "top_clones": [{"id": 29, "n": 779}, {"id": 80, "n": 271}, {"id": 143, "n": 71}, {"id": 98, "n": 38}, {"id": 94, "n": 30}, {"id": 122, "n": 25}, {"id": 63, "n": 7}, {"id": 37, "n": 2}], "isotypes": {"IgG1": 421, "IgG3": 465, "IgM": 91, "IgG2": 115, "IgA1": 93, "IgG4": 26, "IgE": 12}}, {"t": 20, "antigen_molar": 2.600389556520512e-10, "n_entering": 1223, "n_after_division": 2416, "n_selected": 1500, "n_apoptosis": 916, "n_stop": 30, "plasma_out": 190, "memory_out": 78, "best": -7.861263739294312, "median": -7.2938483459838315, "mut": 6.257305194805195, "cdrR": 3.590909090909091, "frR": 0.9991883116883117, "n_clones": 7, "top_clone_frac": 0.663961038961039, "shannon": 1.1292174639587735, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 181, 699, 316, 22, 0, 0, 1, 0, 0, 0, 0, 0, 0], "top_clones": [{"id": 29, "n": 818}, {"id": 80, "n": 182}, {"id": 143, "n": 98}, {"id": 98, "n": 57}, {"id": 94, "n": 46}, {"id": 122, "n": 21}, {"id": 63, "n": 10}], "isotypes": {"IgG1": 408, "IgG3": 486, "IgG4": 25, "IgG2": 127, "IgM": 68, "IgE": 11, "IgA1": 107}}, {"t": 21, "antigen_molar": 2.3403506008684607e-10, "n_entering": 1232, "n_after_division": 2432, "n_selected": 1500, "n_apoptosis": 932, "n_stop": 32, "plasma_out": 219, "memory_out": 74, "best": -7.85123769325155, "median": -7.3670537559810985, "mut": 6.695111847555924, "cdrR": 3.9262634631317317, "frR": 0.9842584921292461, "n_clones": 7, "top_clone_frac": 0.6445733222866611, "shannon": 1.194741366813292, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 245, 693, 243, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0], "top_clones": [{"id": 29, "n": 778}, {"id": 143, "n": 144}, {"id": 80, "n": 131}, {"id": 98, "n": 73}, {"id": 94, "n": 45}, {"id": 122, "n": 22}, {"id": 63, "n": 14}], "isotypes": {"IgG1": 363, "IgG3": 473, "IgG4": 26, "IgG2": 167, "IgM": 40, "IgA1": 129, "IgE": 9}}, {"t": 22, "antigen_molar": 2.1063155407816147e-10, "n_entering": 1207, "n_after_division": 2376, "n_selected": 1500, "n_apoptosis": 876, "n_stop": 38, "plasma_out": 217, "memory_out": 93, "best": -7.85123769325155, "median": -7.4105313685836185, "mut": 7.31344537815126, "cdrR": 4.334453781512605, "frR": 1.053781512605042, "n_clones": 7, "top_clone_frac": 0.6067226890756302, "shannon": 1.2481835170002276, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 19, 316, 654, 190, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0], "top_clones": [{"id": 29, "n": 722}, {"id": 143, "n": 198}, {"id": 80, "n": 97}, {"id": 98, "n": 92}, {"id": 94, "n": 51}, {"id": 122, "n": 19}, {"id": 63, "n": 11}], "isotypes": {"IgG1": 342, "IgG3": 440, "IgG4": 24, "IgG2": 216, "IgM": 21, "IgA1": 142, "IgE": 5}}, {"t": 23, "antigen_molar": 1.8956839867034532e-10, "n_entering": 1190, "n_after_division": 2342, "n_selected": 1500, "n_apoptosis": 842, "n_stop": 38, "plasma_out": 207, "memory_out": 77, "best": -7.898366567760952, "median": -7.4138388907992345, "mut": 7.786184210526316, "cdrR": 4.702302631578948, "frR": 1.0682565789473684, "n_clones": 7, "top_clone_frac": 0.5666118421052632, "shannon": 1.262594328904471, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 28, 409, 637, 136, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0], "top_clones": [{"id": 29, "n": 689}, {"id": 143, "n": 272}, {"id": 98, "n": 104}, {"id": 80, "n": 74}, {"id": 94, "n": 55}, {"id": 122, "n": 12}, {"id": 63, "n": 10}], "isotypes": {"IgG1": 331, "IgG3": 396, "IgG4": 22, "IgG2": 291, "IgM": 14, "IgE": 5, "IgA1": 157}}, {"t": 24, "antigen_molar": 1.706115588033108e-10, "n_entering": 1216, "n_after_division": 2399, "n_selected": 1500, "n_apoptosis": 899, "n_stop": 33, "plasma_out": 228, "memory_out": 77, "best": -7.898366567760952, "median": -7.47373500859662, "mut": 8.569874476987447, "cdrR": 5.19163179916318, "frR": 1.1556485355648536, "n_clones": 7, "top_clone_frac": 0.4903765690376569, "shannon": 1.3009273575862779, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 39, 498, 574, 81, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0], "top_clones": [{"id": 29, "n": 586}, {"id": 143, "n": 359}, {"id": 98, "n": 127}, {"id": 94, "n": 55}, {"id": 80, "n": 47}, {"id": 122, "n": 12}, {"id": 63, "n": 9}], "isotypes": {"IgG1": 299, "IgG3": 321, "IgG4": 15, "IgG2": 372, "IgM": 8, "IgA1": 176, "IgE": 4}}, {"t": 25, "antigen_molar": 1.5355040292297972e-10, "n_entering": 1195, "n_after_division": 2357, "n_selected": 1500, "n_apoptosis": 857, "n_stop": 33, "plasma_out": 203, "memory_out": 92, "best": -8.013740591755582, "median": -7.521571922278335, "mut": 9.159336099585062, "cdrR": 5.608298755186722, "frR": 1.1975103734439834, "n_clones": 7, "top_clone_frac": 0.4224066390041494, "shannon": 1.2845972775683487, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 51, 599, 500, 54, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "top_clones": [{"id": 29, "n": 509}, {"id": 143, "n": 450}, {"id": 98, "n": 152}, {"id": 94, "n": 44}, {"id": 80, "n": 30}, {"id": 122, "n": 13}, {"id": 63, "n": 7}], "isotypes": {"IgG1": 286, "IgG3": 249, "IgG4": 17, "IgG2": 455, "IgM": 5, "IgA1": 191, "IgE": 2}}, {"t": 26, "antigen_molar": 1.3819536263068176e-10, "n_entering": 1205, "n_after_division": 2376, "n_selected": 1500, "n_apoptosis": 876, "n_stop": 34, "plasma_out": 230, "memory_out": 93, "best": -8.013740591755582, "median": -7.5594083060313055, "mut": 9.632115548003398, "cdrR": 5.932030586236194, "frR": 1.2166525063721325, "n_clones": 7, "top_clone_frac": 0.44010195412064573, "shannon": 1.2340637605688431, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 62, 639, 436, 38, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "top_clones": [{"id": 143, "n": 518}, {"id": 29, "n": 426}, {"id": 98, "n": 165}, {"id": 94, "n": 36}, {"id": 80, "n": 20}, {"id": 122, "n": 7}, {"id": 63, "n": 5}], "isotypes": {"IgG1": 259, "IgG3": 190, "IgG4": 9, "IgG2": 521, "IgM": 5, "IgA1": 192, "IgE": 1}}, {"t": 27, "antigen_molar": 1.243758263676136e-10, "n_entering": 1177, "n_after_division": 2322, "n_selected": 1500, "n_apoptosis": 822, "n_stop": 32, "plasma_out": 219, "memory_out": 70, "best": -8.013740591755582, "median": -7.5956890683949645, "mut": 10.137902559867877, "cdrR": 6.313790255986787, "frR": 1.2436003303055325, "n_clones": 7, "top_clone_frac": 0.5136251032204789, "shannon": 1.1569875270113859, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 76, 722, 392, 16, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], "top_clones": [{"id": 143, "n": 622}, {"id": 29, "n": 374}, {"id": 98, "n": 164}, {"id": 94, "n": 25}, {"id": 80, "n": 17}, {"id": 63, "n": 6}, {"id": 122, "n": 3}], "isotypes": {"IgG1": 230, "IgG3": 144, "IgG4": 8, "IgG2": 624, "IgM": 4, "IgA1": 201}}, {"t": 28, "antigen_molar": 1.1193824373085223e-10, "n_entering": 1211, "n_after_division": 2392, "n_selected": 1500, "n_apoptosis": 892, "n_stop": 30, "plasma_out": 217, "memory_out": 83, "best": -8.013740591755582, "median": -7.597442413971949, "mut": 10.666666666666666, "cdrR": 6.713333333333333, "frR": 1.2516666666666667, "n_clones": 7, "top_clone_frac": 0.5908333333333333, "shannon": 1.0590949314493983, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 109, 787, 288, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "top_clones": [{"id": 143, "n": 709}, {"id": 29, "n": 304}, {"id": 98, "n": 149}, {"id": 94, "n": 24}, {"id": 80, "n": 8}, {"id": 63, "n": 4}, {"id": 122, "n": 2}], "isotypes": {"IgG3": 88, "IgG4": 3, "IgG1": 197, "IgG2": 711, "IgM": 4, "IgA1": 197}}, {"t": 29, "antigen_molar": 1.00744419357767e-10, "n_entering": 1200, "n_after_division": 2370, "n_selected": 1500, "n_apoptosis": 870, "n_stop": 30, "plasma_out": 190, "memory_out": 74, "best": -8.013740591755582, "median": -7.601281681754051, "mut": 11.045307443365695, "cdrR": 7.0283171521035595, "frR": 1.279126213592233, "n_clones": 7, "top_clone_frac": 0.6496763754045307, "shannon": 0.974817200700187, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 133, 835, 251, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "top_clones": [{"id": 143, "n": 803}, {"id": 29, "n": 260}, {"id": 98, "n": 142}, {"id": 94, "n": 19}, {"id": 63, "n": 6}, {"id": 80, "n": 5}, {"id": 122, "n": 1}], "isotypes": {"IgG3": 57, "IgG4": 1, "IgG1": 179, "IgG2": 805, "IgM": 3, "IgA1": 191}}, {"t": 30, "antigen_molar": 9.06699774219903e-11, "n_entering": 1236, "n_after_division": 2437, "n_selected": 1500, "n_apoptosis": 937, "n_stop": 35, "plasma_out": 223, "memory_out": 89, "best": -8.320757166927335, "median": -7.613337034474638, "mut": 11.50925925925926, "cdrR": 7.393939393939394, "frR": 1.3249158249158248, "n_clones": 6, "top_clone_frac": 0.7213804713804713, "shannon": 0.8353625274857143, "hist": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 11, 164, 799, 207, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "top_clones": [{"id": 143, "n": 857}, {"id": 29, "n": 194}, {"id": 98, "n": 120}, {"id": 94, "n": 12}, {"id": 63, "n": 3}, {"id": 80, "n": 2}], "isotypes": {"IgG3": 37, "IgM": 2, "IgG1": 140, "IgA1": 152, "IgG2": 857}}], "serum": [{"round": 1, "titre_au": 17.000000000000007, "mean_pkd": 6.158978686109086}, {"round": 2, "titre_au": 44.94392984217861, "mean_pkd": 6.125863175287196}, {"round": 3, "titre_au": 77.17601373793988, "mean_pkd": 6.146638388124798}, {"round": 4, "titre_au": 106.5451557185823, "mean_pkd": 6.17311778138966}, {"round": 5, "titre_au": 125.51735123539132, "mean_pkd": 6.201035395108445}, {"round": 6, "titre_au": 145.24183238127574, "mean_pkd": 6.234891021312972}, {"round": 7, "titre_au": 214.39440871394055, "mean_pkd": 6.339673391909217}, {"round": 8, "titre_au": 285.50584090290596, "mean_pkd": 6.4330596310221315}, {"round": 9, "titre_au": 345.8624747312518, "mean_pkd": 6.497724444962432}, {"round": 10, "titre_au": 410.4676278709378, "mean_pkd": 6.5648599028527075}, {"round": 11, "titre_au": 468.5407281131552, "mean_pkd": 6.621703584396317}, {"round": 12, "titre_au": 517.5521529896466, "mean_pkd": 6.670766084605493}, {"round": 13, "titre_au": 583.3966439970013, "mean_pkd": 6.727803248078364}, {"round": 14, "titre_au": 638.6839105942192, "mean_pkd": 6.770545512666763}, {"round": 15, "titre_au": 695.5053068052719, "mean_pkd": 6.8106209119816175}, {"round": 16, "titre_au": 746.1457209584775, "mean_pkd": 6.846923689711833}, {"round": 17, "titre_au": 800.2766623103477, "mean_pkd": 6.882648902519344}, {"round": 18, "titre_au": 851.3050611463935, "mean_pkd": 6.91488509876825}, {"round": 19, "titre_au": 891.5463485567933, "mean_pkd": 6.941313459159968}, {"round": 20, "titre_au": 931.6961207342633, "mean_pkd": 6.9670284739335075}, {"round": 21, "titre_au": 980.8161700032956, "mean_pkd": 6.996463780587863}, {"round": 22, "titre_au": 1028.3502661487053, "mean_pkd": 7.026570906315237}, {"round": 23, "titre_au": 1071.5988353912203, "mean_pkd": 7.0541087800247615}, {"round": 24, "titre_au": 1121.1988197182004, "mean_pkd": 7.083480812214078}, {"round": 25, "titre_au": 1161.746407163563, "mean_pkd": 7.109002750101868}, {"round": 26, "titre_au": 1210.8272246735144, "mean_pkd": 7.137435893021916}, {"round": 27, "titre_au": 1255.768659605279, "mean_pkd": 7.162729956843791}, {"round": 28, "titre_au": 1299.5984705578162, "mean_pkd": 7.186507726588861}, {"round": 29, "titre_au": 1333.9802447253637, "mean_pkd": 7.208007093869729}, {"round": 30, "titre_au": 1379.198244854227, "mean_pkd": 7.232358448323741}], "lineage": {"clone_id": 29, "n_nodes": 124, "nodes": [{"i": 0, "parent": null, "nmut": 0, "n": 15, "kd": -7.284647880925855, "iso": "IgG1", "birth": 15}, {"i": 1, "parent": 0, "nmut": 1, "n": 1, "kd": -7.030852601646254, "iso": "IgG1", "birth": 15}, {"i": 2, "parent": 0, "nmut": 1, "n": 1, "kd": -7.284647880925855, "iso": "IgG1", "birth": 16}, {"i": 3, "parent": 0, "nmut": 1, "n": 1, "kd": -7.157750241286054, "iso": "IgG1", "birth": 10}, {"i": 4, "parent": 0, "nmut": 1, "n": 1, "kd": -7.284647880925855, "iso": "IgG1", "birth": 10}, {"i": 5, "parent": 0, "nmut": 1, "n": 2, "kd": -7.081235754909683, "iso": "IgG1", "birth": 9}, {"i": 6, "parent": 0, "nmut": 1, "n": 1, "kd": -7.157750241286054, "iso": "IgG1", "birth": 16}, {"i": 7, "parent": 0, "nmut": 1, "n": 6, "kd": -7.157750241286054, "iso": "IgM", "birth": 11}, {"i": 8, "parent": 0, "nmut": 1, "n": 2, "kd": -7.157750241286054, "iso": "IgM", "birth": 9}, {"i": 9, "parent": 0, "nmut": 2, "n": 4, "kd": -7.289330666940911, "iso": "IgG1", "birth": 20}, {"i": 10, "parent": 0, "nmut": 2, "n": 1, "kd": -7.289330666940911, "iso": "IgE", "birth": 12}, {"i": 11, "parent": 0, "nmut": 2, "n": 1, "kd": -7.162433027301111, "iso": "IgM", "birth": 8}, {"i": 12, "parent": 0, "nmut": 2, "n": 2, "kd": -7.030852601646254, "iso": "IgG1", "birth": 12}, {"i": 13, "parent": 0, "nmut": 2, "n": 1, "kd": -6.882865302534504, "iso": "IgG1", "birth": 8}, {"i": 14, "parent": 0, "nmut": 2, "n": 1, "kd": -7.157750241286054, "iso": "IgG4", "birth": 6}, {"i": 15, "parent": 3, "nmut": 2, "n": 1, "kd": -7.030852601646254, "iso": "IgG1", "birth": 14}, {"i": 16, "parent": 0, "nmut": 2, "n": 1, "kd": -7.162433027301111, "iso": "IgA1", "birth": 14}, {"i": 17, "parent": 0, "nmut": 3, "n": 1, "kd": -7.4105313685836185, "iso": "IgG3", "birth": 17}, {"i": 18, "parent": 0, "nmut": 3, "n": 1, "kd": -7.283633728943818, "iso": "IgG3", "birth": 28}, {"i": 19, "parent": 0, "nmut": 3, "n": 1, "kd": -7.283633728943818, "iso": "IgG3", "birth": 26}, {"i": 20, "parent": 11, "nmut": 3, "n": 1, "kd": -7.162433027301111, "iso": "IgM", "birth": 18}, {"i": 21, "parent": 0, "nmut": 3, "n": 1, "kd": -7.289330666940911, "iso": "IgG1", "birth": 19}, {"i": 22, "parent": 0, "nmut": 3, "n": 1, "kd": -7.4105313685836185, "iso": "IgG3", "birth": 24}, {"i": 23, "parent": 0, "nmut": 3, "n": 6, "kd": -7.4105313685836185, "iso": "IgG3", "birth": 23}, {"i": 24, "parent": 0, "nmut": 3, "n": 2, "kd": -7.283633728943818, "iso": "IgG3", "birth": 21}, {"i": 25, "parent": 17, "nmut": 4, "n": 1, "kd": -7.283633728943818, "iso": "IgG3", "birth": 19}, {"i": 26, "parent": 17, "nmut": 4, "n": 2, "kd": -7.4105313685836185, "iso": "IgG1", "birth": 20}, {"i": 27, "parent": 0, "nmut": 4, "n": 1, "kd": -6.971587201326175, "iso": "IgM", "birth": 12}, {"i": 28, "parent": 0, "nmut": 4, "n": 1, "kd": -7.103242324392986, "iso": "IgG1", "birth": 17}, {"i": 29, "parent": 17, "nmut": 4, "n": 1, "kd": -7.4105313685836185, "iso": "IgG3", "birth": 21}, {"i": 30, "parent": 2, "nmut": 4, "n": 1, "kd": -7.157750241286054, "iso": "IgG3", "birth": 11}, {"i": 31, "parent": 0, "nmut": 4, "n": 2, "kd": -7.12296311719003, "iso": "IgM", "birth": 9}, {"i": 32, "parent": 0, "nmut": 4, "n": 2, "kd": -7.157750241286054, "iso": "IgM", "birth": 11}, {"i": 33, "parent": 32, "nmut": 5, "n": 1, "kd": -7.157750241286054, "iso": "IgM", "birth": 8}, {"i": 34, "parent": 8, "nmut": 5, "n": 1, "kd": -6.99606547755023, "iso": "IgA1", "birth": 11}, {"i": 35, "parent": 17, "nmut": 5, "n": 1, "kd": -7.283633728943818, "iso": "IgG3", "birth": 18}, {"i": 36, "parent": 17, "nmut": 5, "n": 1, "kd": -7.4105313685836185, "iso": "IgG3", "birth": 30}, {"i": 37, "parent": 0, "nmut": 5, "n": 1, "kd": -6.903954962006455, "iso": "IgG2", "birth": 15}, {"i": 38, "parent": 21, "nmut": 5, "n": 1, "kd": -7.162433027301111, "iso": "IgM", "birth": 13}, {"i": 39, "parent": 17, "nmut": 5, "n": 3, "kd": -7.28815785289492, "iso": "IgG2", "birth": 22}, {"i": 40, "parent": 17, "nmut": 5, "n": 2, "kd": -7.28815785289492, "iso": "IgM", "birth": 15}, {"i": 41, "parent": 7, "nmut": 6, "n": 1, "kd": -6.781740108381711, "iso": "IgM", "birth": 7}, {"i": 42, "parent": 17, "nmut": 6, "n": 1, "kd": -7.161260213255121, "iso": "IgM", "birth": 14}, {"i": 43, "parent": 0, "nmut": 6, "n": 1, "kd": -6.903954962006455, "iso": "IgE", "birth": 16}, {"i": 44, "parent": 22, "nmut": 6, "n": 1, "kd": -7.28815785289492, "iso": "IgG3", "birth": 21}, {"i": 45, "parent": 23, "nmut": 6, "n": 1, "kd": -7.409502420925765, "iso": "IgG1", "birth": 23}, {"i": 46, "parent": 8, "nmut": 6, "n": 2, "kd": -7.283633728943818, "iso": "IgG3", "birth": 18}, {"i": 47, "parent": 0, "nmut": 6, "n": 2, "kd": -7.360282811331883, "iso": "IgG1", "birth": 17}, {"i": 48, "parent": 17, "nmut": 6, "n": 1, "kd": -7.283633728943818, "iso": "IgG3", "birth": 24}, {"i": 49, "parent": 8, "nmut": 7, "n": 1, "kd": -7.2667449659385035, "iso": "IgG3", "birth": 21}, {"i": 50, "parent": 17, "nmut": 7, "n": 1, "kd": -7.156736089304019, "iso": "IgG3", "birth": 17}, {"i": 51, "parent": 14, "nmut": 7, "n": 1, "kd": -7.159028120950578, "iso": "IgG1", "birth": 12}, {"i": 52, "parent": 6, "nmut": 7, "n": 1, "kd": -6.777057322366654, "iso": "IgM", "birth": 14}, {"i": 53, "parent": 29, "nmut": 7, "n": 1, "kd": -7.283633728943818, "iso": "IgG3", "birth": 22}, {"i": 54, "parent": 17, "nmut": 7, "n": 2, "kd": -7.610479237390848, "iso": "IgA1", "birth": 23}, {"i": 55, "parent": 17, "nmut": 7, "n": 1, "kd": -7.5790185199832205, "iso": "IgM", "birth": 30}, {"i": 56, "parent": 17, "nmut": 7, "n": 1, "kd": -7.483581597751048, "iso": "IgA1", "birth": 28}, {"i": 57, "parent": 17, "nmut": 8, "n": 1, "kd": -7.28815785289492, "iso": "IgG1", "birth": 20}, {"i": 58, "parent": 22, "nmut": 8, "n": 1, "kd": -7.28815785289492, "iso": "IgG3", "birth": 23}, {"i": 59, "parent": 49, "nmut": 8, "n": 1, "kd": -7.393642605578304, "iso": "IgG3", "birth": 27}, {"i": 60, "parent": 17, "nmut": 8, "n": 1, "kd": -7.2667449659385035, "iso": "IgG3", "birth": 22}, {"i": 61, "parent": 49, "nmut": 8, "n": 1, "kd": -7.2667449659385035, "iso": "IgG3", "birth": 14}, {"i": 62, "parent": 47, "nmut": 8, "n": 2, "kd": -7.360282811331883, "iso": "IgG1", "birth": 18}, {"i": 63, "parent": 53, "nmut": 8, "n": 1, "kd": -7.283633728943818, "iso": "IgG3", "birth": 23}, {"i": 64, "parent": 17, "nmut": 8, "n": 1, "kd": -7.5437974046797205, "iso": "IgG3", "birth": 28}, {"i": 65, "parent": 48, "nmut": 9, "n": 1, "kd": -7.393642605578304, "iso": "IgG3", "birth": 29}, {"i": 66, "parent": 10, "nmut": 9, "n": 1, "kd": -7.279160884131614, "iso": "IgG1", "birth": 18}, {"i": 67, "parent": 54, "nmut": 9, "n": 1, "kd": -7.483581597751048, "iso": "IgA1", "birth": 30}, {"i": 68, "parent": 54, "nmut": 9, "n": 1, "kd": -7.483581597751048, "iso": "IgA1", "birth": 25}, {"i": 69, "parent": 10, "nmut": 9, "n": 1, "kd": -7.279160884131614, "iso": "IgG1", "birth": 19}, {"i": 70, "parent": 8, "nmut": 9, "n": 1, "kd": -7.263134861963635, "iso": "IgA1", "birth": 25}, {"i": 71, "parent": 8, "nmut": 9, "n": 1, "kd": -7.230010227106554, "iso": "IgG1", "birth": 27}, {"i": 72, "parent": 54, "nmut": 9, "n": 1, "kd": -7.570325980785482, "iso": "IgA1", "birth": 30}, {"i": 73, "parent": 54, "nmut": 10, "n": 18, "kd": -7.701949104601748, "iso": "IgA1", "birth": 25}, {"i": 74, "parent": 66, "nmut": 10, "n": 1, "kd": -7.152263244491815, "iso": "IgG1", "birth": 20}, {"i": 75, "parent": 66, "nmut": 10, "n": 1, "kd": -7.200851211810214, "iso": "IgG1", "birth": 17}, {"i": 76, "parent": 54, "nmut": 10, "n": 1, "kd": -7.3566839581112475, "iso": "IgA1", "birth": 30}, {"i": 77, "parent": 25, "nmut": 10, "n": 2, "kd": -7.464768665580283, "iso": "IgG3", "birth": 29}, {"i": 78, "parent": 66, "nmut": 10, "n": 1, "kd": -7.152263244491815, "iso": "IgG1", "birth": 12}, {"i": 79, "parent": 54, "nmut": 10, "n": 3, "kd": -7.483581597751048, "iso": "IgA1", "birth": 28}, {"i": 80, "parent": 66, "nmut": 10, "n": 3, "kd": -7.152263244491815, "iso": "IgG1", "birth": 13}, {"i": 81, "parent": 54, "nmut": 11, "n": 1, "kd": -7.64535475505871, "iso": "IgA1", "birth": 28}, {"i": 82, "parent": 54, "nmut": 11, "n": 2, "kd": -7.66753789888798, "iso": "IgA1", "birth": 27}, {"i": 83, "parent": 54, "nmut": 11, "n": 1, "kd": -7.36095607012545, "iso": "IgA1", "birth": 30}, {"i": 84, "parent": 54, "nmut": 11, "n": 1, "kd": -7.474843938954464, "iso": "IgA1", "birth": 29}, {"i": 85, "parent": 49, "nmut": 11, "n": 1, "kd": -7.271130435998259, "iso": "IgG3", "birth": 29}, {"i": 86, "parent": 54, "nmut": 11, "n": 1, "kd": -7.557919378548618, "iso": "IgA1", "birth": 30}, {"i": 87, "parent": 73, "nmut": 11, "n": 3, "kd": -7.701949104601748, "iso": "IgA1", "birth": 30}, {"i": 88, "parent": 54, "nmut": 11, "n": 1, "kd": -7.602798359302041, "iso": "IgA1", "birth": 30}, {"i": 89, "parent": 54, "nmut": 12, "n": 1, "kd": -7.483581597751048, "iso": "IgA1", "birth": 25}, {"i": 90, "parent": 73, "nmut": 12, "n": 1, "kd": -7.312050182201061, "iso": "IgA1", "birth": 30}, {"i": 91, "parent": 54, "nmut": 12, "n": 1, "kd": -7.483581597751048, "iso": "IgA1", "birth": 30}, {"i": 92, "parent": 81, "nmut": 12, "n": 1, "kd": -7.51845711541891, "iso": "IgA1", "birth": 30}, {"i": 93, "parent": 73, "nmut": 12, "n": 4, "kd": -7.701949104601748, "iso": "IgA1", "birth": 29}, {"i": 94, "parent": 73, "nmut": 12, "n": 1, "kd": -7.575051464961947, "iso": "IgA1", "birth": 27}, {"i": 95, "parent": 73, "nmut": 12, "n": 1, "kd": -7.43894782184086, "iso": "IgA1", "birth": 22}, {"i": 96, "parent": 40, "nmut": 12, "n": 1, "kd": -7.165778635053723, "iso": "IgG1", "birth": 20}, {"i": 97, "parent": 73, "nmut": 13, "n": 1, "kd": -7.532557317784386, "iso": "IgA1", "birth": 30}, {"i": 98, "parent": 73, "nmut": 13, "n": 1, "kd": -7.575051464961947, "iso": "IgA1", "birth": 24}, {"i": 99, "parent": 73, "nmut": 13, "n": 2, "kd": -7.229786318471448, "iso": "IgA1", "birth": 21}, {"i": 100, "parent": 87, "nmut": 13, "n": 1, "kd": -7.701949104601748, "iso": "IgA1", "birth": 30}, {"i": 101, "parent": 90, "nmut": 13, "n": 1, "kd": -7.312050182201061, "iso": "IgA1", "birth": 26}, {"i": 102, "parent": 89, "nmut": 13, "n": 1, "kd": -7.610479237390848, "iso": "IgA1", "birth": 30}, {"i": 103, "parent": 81, "nmut": 13, "n": 1, "kd": -7.474843938954464, "iso": "IgA1", "birth": 29}, {"i": 104, "parent": 81, "nmut": 13, "n": 1, "kd": -7.510585622118093, "iso": "IgA1", "birth": 24}, {"i": 105, "parent": 73, "nmut": 14, "n": 2, "kd": -7.532557317784386, "iso": "IgA1", "birth": 30}, {"i": 106, "parent": 99, "nmut": 14, "n": 1, "kd": -7.229786318471448, "iso": "IgA1", "birth": 23}, {"i": 107, "parent": 84, "nmut": 14, "n": 1, "kd": -7.479127063810815, "iso": "IgA1", "birth": 28}, {"i": 108, "parent": 93, "nmut": 14, "n": 1, "kd": -7.706105929073546, "iso": "IgA1", "birth": 30}, {"i": 109, "parent": 81, "nmut": 14, "n": 1, "kd": -7.474843938954464, "iso": "IgA1", "birth": 30}, {"i": 110, "parent": 82, "nmut": 14, "n": 1, "kd": -7.66753789888798, "iso": "IgA1", "birth": 30}, {"i": 111, "parent": 73, "nmut": 14, "n": 1, "kd": -7.321256185682348, "iso": "IgA1", "birth": 30}, {"i": 112, "parent": 73, "nmut": 14, "n": 1, "kd": -7.448153825322148, "iso": "IgA1", "birth": 30}, {"i": 113, "parent": 109, "nmut": 15, "n": 1, "kd": -7.347946299314664, "iso": "IgA1", "birth": 30}, {"i": 114, "parent": 73, "nmut": 15, "n": 1, "kd": -7.659454957424186, "iso": "IgA1", "birth": 30}, {"i": 115, "parent": 73, "nmut": 15, "n": 1, "kd": -7.321256185682348, "iso": "IgA1", "birth": 28}, {"i": 116, "parent": 93, "nmut": 15, "n": 1, "kd": -7.5760770834192055, "iso": "IgA1", "birth": 30}, {"i": 117, "parent": 93, "nmut": 15, "n": 1, "kd": -7.701003693987319, "iso": "IgA1", "birth": 30}, {"i": 118, "parent": 111, "nmut": 15, "n": 1, "kd": -7.321256185682348, "iso": "IgA1", "birth": 30}, {"i": 119, "parent": 66, "nmut": 15, "n": 1, "kd": -7.12957296511565, "iso": "IgG1", "birth": 21}, {"i": 120, "parent": 66, "nmut": 15, "n": 1, "kd": -7.2564706047554495, "iso": "IgG1", "birth": 21}, {"i": 121, "parent": 115, "nmut": 16, "n": 1, "kd": -7.321256185682348, "iso": "IgA1", "birth": 29}, {"i": 122, "parent": 73, "nmut": 16, "n": 1, "kd": -7.405964739254258, "iso": "IgA1", "birth": 30}, {"i": 123, "parent": 73, "nmut": 17, "n": 1, "kd": -7.087417406308322, "iso": "IgA1", "birth": 30}], "v_gene": "IGHV2-5*02", "d_gene": "IGHD1-26*01", "j_gene": "IGHJ1*01", "germline_cdr3": "CAHRQGVVGATPYFQHW", "n_unique_total": 2154, "max_mutations": 17}, "vdj_example": {"v": "IGHV2-5*02", "d": "IGHD1-26*01", "j": "IGHJ1*01", "cdr3_nt": "TGTGCACACAGACAGGGGGTAGTGGGAGCTACACCATACTTCCAGCACTGG", "cdr3_aa": "CAHRQGVVGATPYFQHW", "v_prefix_nt": 288, "fr4_nt": 31, "seq_aa": "QITLKESGPTLVKPTQTLTLTCTFSGFSLSTSGVGVGWIRQPPGKALEWLALIYWDDDKRYSPSLKSRLTITKDTSKNQVVLTMTNMDPVDTATYYCAHRQGVVGATPYFQHWGQGTLVTVSS", "seq_len_nt": 370, "junction": {"del_v": 6, "del_j": 11, "del_d_left": 12, "del_d_right": 9, "p_v": 0, "p_j": 0, "p_d_left": 0, "p_d_right": 0, "trim_v": 0, "trim_j": 5, "trim_d_left": 6, "trim_d_right": 3, "n1": "AGGGGGTA", "n2": "ACC"}, "regions": ["fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4"]}, "s5f": {"seq_nt": "CAGATCACCTTGAAGGAGTCTGGTCCTACGCTGGTGAAACCCACACAGACCCTCACGCTGACCTGCACCTTCTCTGGGTTCTCACTCAGCACTAGTGGAGTGGGTGTGGGCTGGATCCGTCAGCCCCCAGGAAAGGCCCTGGAGTGGCTTGCACTCATTTATTGGGATGATGATAAGCGCTACAGCCCATCTCTGAAGAGCAGGCTCACCATCACCAAGGACACCTCCAAAAACCAGGTGGTCCTTACAATGACCAACATGGACCCTGTGGACACAGCCACATATTACTGTGCACACAGACAGGGGGTAGTGGGAGCTACACCATACTTCCAGCACTGGGGCCAGGGCACCCTGGTCACCGTCTCCTCAG", "regions": ["fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "fwr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "cdr1", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "fwr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "cdr2", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "fwr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "cdr3", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4", "fwr4"], "mutability": [0.0009766, 0.0009766, 0.0004194, 0.0002702, 0.000402, 0.0005346, 0.0008408, 0.0005698, 0.000802, 0.0006265, 0.0002597, 0.0002314, 0.0005507, 0.0003247, 0.0003398, 0.0001112, 0.0008705, 0.0004452, 0.0003448, 0.000211, 0.0004643, 0.0002967, 0.0003895, 0.0003915, 0.0001455, 0.0025084, 0.0012778, 0.0016545, 0.001664, 0.0033673, 0.0015133, 0.0003007, 0.0002967, 0.0009643, 0.0008772, 0.0002666, 0.0005752, 0.0015039, 0.0011741, 0.0020781, 0.0004936, 0.0001354, 0.0009962, 0.0004554, 0.0003566, 0.0007048, 0.0006234, 7.86e-05, 0.0007337, 0.000396, 0.0003061, 0.0004629, 0.000396, 0.0001526, 0.0005991, 0.0006236, 0.0033673, 0.0015133, 0.0001874, 7.49e-05, 0.0006369, 0.0003164, 0.0010592, 0.0002479, 0.0012414, 0.0009197, 0.0007564, 0.0005698, 0.000802, 0.0006076, 0.0003902, 0.001018, 0.0003148, 0.0003535, 0.0004643, 0.0001755, 0.0006287, 0.0026721, 0.0010387, 0.0004424, 0.001018, 0.0004231, 0.0001526, 0.0009959, 0.0003648, 0.0004413, 0.0003415, 0.0010246, 0.0018491, 0.003868, 0.0015448, 0.0006104, 0.0010044, 0.0015062, 0.0008403, 0.000676, 0.0005846, 0.000396, 0.0008705, 0.0014379, 0.000676, 0.000272, 0.0006287, 0.0007896, 0.0004932, 0.0008403, 0.0005688, 0.000272, 0.0001586, 0.0016751, 0.0001814, 0.0003007, 0.0003739, 0.0013023, 0.0005822, 0.0006137, 0.0005817, 0.0005088, 0.0002682, 0.0004956, 0.0001285, 0.0010246, 0.0002086, 0.0041953, 9.6e-05, 8.11e-05, 0.0001744, 0.0001734, 0.0005335, 0.0006245, 0.0005004, 0.0008621, 0.0009756, 0.0007117, 0.0001094, 0.0002086, 0.0001425, 9.5e-05, 0.0002193, 0.0010141, 0.0003739, 0.000396, 0.0008705, 0.0014379, 0.000676, 0.0001821, 0.0020854, 0.0002822, 0.0005467, 0.000583, 0.0028979, 0.0009197, 0.0015448, 0.0003648, 0.0004413, 0.000312, 0.0009267, 0.0009873, 0.0005662, 0.0016735, 0.0027926, 0.0009836, 0.0005046, 0.0001009, 0.0006301, 0.0024204, 0.0016017, 0.0008621, 0.0016165, 0.0005025, 0.0008621, 0.0016165, 0.0007336, 0.0008652, 0.0010352, 0.0011899, 0.0011899, 0.0007494, 0.0004009, 0.0013611, 0.0010485, 0.0014422, 0.0013, 0.0007513, 0.0002086, 0.0041953, 0.0001362, 0.0001818, 0.0012754, 0.0005465, 0.0008164, 0.0003148, 0.0003535, 0.0004127, 0.0005577, 0.0005507, 0.0015767, 0.0002872, 0.0002999, 0.0006879, 0.0041334, 0.0004638, 9.24e-05, 0.0031231, 0.0002654, 0.0002874, 0.0001526, 0.0008408, 0.0004554, 0.000266, 0.0012754, 0.000441, 0.0005346, 0.0008408, 0.0004554, 0.0004576, 0.000768, 0.002795, 0.0003398, 0.000235, 0.0004418, 0.000578, 0.0013803, 0.0005698, 0.0006959, 0.0004792, 0.0001865, 0.0005258, 0.0008201, 0.0016142, 0.001821, 0.0011449, 0.0011741, 0.0023828, 0.0005467, 0.0005335, 0.000664, 0.0010436, 0.0007652, 0.0006237, 0.0003895, 0.0003915, 0.0001455, 0.0008774, 0.001007, 0.0025616, 0.0019868, 0.0012773, 0.0011834, 0.0021023, 0.0004713, 0.0001566, 0.0006369, 0.0006659, 0.0004576, 0.0005611, 0.0021289, 0.0010557, 0.0011324, 0.0010275, 0.0008328, 0.0001652, 0.0006024, 0.000396, 0.0003061, 0.0002193, 0.0006025, 0.0010822, 0.0005688, 0.0005846, 0.0001652, 0.0004418, 0.000578, 0.0003566, 0.0007048, 0.0007513, 0.0002086, 0.0017527, 0.0001429, 0.0009962, 0.0003613, 0.0008753, 0.0014878, 0.0025031, 0.0009794, 0.0013992, 0.0016945, 0.0027652, 0.0002906, 0.0010822, 0.0005831, 0.0004119, 0.0009197, 0.0006054, 0.0004554, 0.0003566, 0.0007048, 0.0006234, 7.86e-05, 0.0007229, 0.0001448, 0.0003617, 7.83e-05, 0.0001223, 0.0001597, 0.000464, 0.0050248, 0.001886, 0.0011006, 0.0008403, 0.000676, 0.000272, 0.0006301, 0.0009148, 0.0005299, 0.0039908, 0.0030992, 0.0010485, 0.0014422, 0.000685, 0.0013803, 0.0004554, 0.000266, 0.0009803, 0.0012674, 0.0016945, 0.0019068, 0.0009534, 0.0003902, 0.0015684, 0.0002829, 0.0007051, 0.0018491, 0.003868, 0.0015448, 0.000818, 0.0003406, 0.0001755, 0.0001383, 6.2e-05, 0.0001831, 0.0001596, 0.0002801, 0.0005335, 7.83e-05, 0.0001842, 0.0090607, 0.0019883, 0.0007564, 0.0001995, 0.0003061, 0.0002193, 0.0010141, 0.0002967, 0.0003895, 0.0004262, 0.0001532, 0.0008408, 0.0004062, 0.0001689, 0.0002682, 0.0004496, 0.0002329, 0.0006437, 0.0003021, 0.0006076, 0.000396, 0.0003415, 0.0009766, 0.0009766], "mean": 0.0009765625, "fold_range": 146.22162585629206, "n_fivemers": 1024}, "leads": [{"name": "ST-000", "v": "IGHV3-13*01", "j": "IGHJ4*02", "cdr3": "CASPIVGANTKGGGLGFDYW", "iso": "IgG2", "kd": 9.688563906430924e-09, "nmut": 11, "cdrR": 9, "frR": 0, "tier": "B", "tm": 71.0, "titre": 2.6, "agg": 1.8, "visc": 9.0, "sol": 95.0, "pi": 9.27, "mhcii": 3, "fails": ["binding KD 9.69e-09 M >= 1 nM"], "warns": ["pI 9.3 outside 6.0-9.0"], "vh": "EVQLVESGGGLVQPGGSLRLSCAASGFTFSSYDMHWVRQATGKGLEWVSAIGTVGDTYYPGSVKGRFTISRENAKNSLYLQMNSLRAGDTAVYYCESPTVRATTKGRRLGFDYRGQGTLVTVSS", "backmut": 0, "humanness": 0.9113}, {"name": "ST-001", "v": "IGHV3-13*01", "j": "IGHJ4*02", "cdr3": "CASPIVGANTKGGGLGFDYW", "iso": "IgG2", "kd": 1.2207234270531368e-08, "nmut": 15, "cdrR": 10, "frR": 1, "tier": "B", "tm": 71.0, "titre": 2.6, "agg": 1.8, "visc": 9.0, "sol": 95.0, "pi": 9.27, "mhcii": 3, "fails": ["binding KD 1.22e-08 M >= 1 nM"], "warns": ["pI 9.3 outside 6.0-9.0"], "vh": "EVQLVESGGGLVQPGGSLRLSCAASGFTFSSYDMHWVRQATGKGLEWVSAIGAVGDTYYPGSVKGRFTISRENAKNSLYLQMNSLRAGDTAVYYCESPTVRTNTKGRRLGFDYRGQGTLVTVSS", "backmut": 1, "humanness": 0.8871}, {"name": "ST-002", "v": "IGHV3-13*01", "j": "IGHJ4*02", "cdr3": "CASPIVGANTKGGGLGFDYW", "iso": "IgG2", "kd": 1.4085176931023297e-08, "nmut": 8, "cdrR": 7, "frR": 0, "tier": "B", "tm": 71.0, "titre": 2.6, "agg": 1.8, "visc": 9.0, "sol": 95.0, "pi": 9.47, "mhcii": 3, "fails": ["binding KD 1.41e-08 M >= 1 nM"], "warns": ["pI 9.5 outside 6.0-9.0"], "vh": "EVQLVESGGGLVQPGGSLRLSCAASGFTFSSYDMHWVRQATGKGLEWVSAIGTVGDTYYPGSVKGRFTISRENAKNSLYLQMNSLRAGDTAVYYCGSPTVRANTKGRRLGFDYRGQGTLVTVSS", "backmut": 0, "humanness": 0.9355}, {"name": "ST-003", "v": "IGHV3-13*01", "j": "IGHJ4*02", "cdr3": "CASPIVGANTKGGGLGFDYW", "iso": "IgG2", "kd": 1.4085176931023297e-08, "nmut": 11, "cdrR": 8, "frR": 0, "tier": "B", "tm": 71.0, "titre": 2.6, "agg": 1.8, "visc": 9.0, "sol": 95.0, "pi": 9.47, "mhcii": 4, "fails": ["binding KD 1.41e-08 M >= 1 nM"], "warns": ["pI 9.5 outside 6.0-9.0"], "vh": "EVQLVESGGGLVQPGGSLRLSCAASGFTLSSYDMHWVRQATGKGLEWVSAIGTVGDTYYPGSVKGRFTISRENAKNSLYLQMNSLRAGDTAVYYCGSPTVRANTKGRRLGFDYRGQGTLVTVSS", "backmut": 0, "humanness": 0.9113}, {"name": "ST-004", "v": "IGHV3-13*01", "j": "IGHJ4*02", "cdr3": "CASPIVGANTKGGGLGFDYW", "iso": "IgG2", "kd": 1.4085176931023297e-08, "nmut": 12, "cdrR": 10, "frR": 0, "tier": "B", "tm": 71.0, "titre": 2.6, "agg": 1.8, "visc": 9.0, "sol": 95.0, "pi": 9.64, "mhcii": 4, "fails": ["binding KD 1.41e-08 M >= 1 nM"], "warns": ["pI 9.6 outside 6.0-9.0"], "vh": "EVQLVESGGGLVQPGGSLRLSCAASGFLFRSYDMHWVRQATGKGLEWVSAIGTVGDTYYPGSVKGRFTISRENAKNSLYLQMNSLRAGDTAVYYCGSPTVRANTKGRRLGFDYRGQGTLVTVSS", "backmut": 0, "humanness": 0.9032}, {"name": "ST-005", "v": "IGHV3-13*01", "j": "IGHJ4*02", "cdr3": "CASPIVGANTKGGGLGFDYW", "iso": "IgG2", "kd": 1.4085176931023297e-08, "nmut": 10, "cdrR": 9, "frR": 0, "tier": "B", "tm": 71.0, "titre": 2.6, "agg": 1.8, "visc": 9.0, "sol": 95.0, "pi": 9.47, "mhcii": 3, "fails": ["binding KD 1.41e-08 M >= 1 nM"], "warns": ["pI 9.5 outside 6.0-9.0"], "vh": "EVQLVESGGGLVQPGGSLRLSCAASGFTFTSYDMHWVRQATGKGLEWVSAIGAVGDTYYPGSVKGRFTISRENAKNSLYLQMNSLRAGDTAVYYCGSPTVRANTKGRRLGFDYRGQGTLVTVSS", "backmut": 0, "humanness": 0.9194}, {"name": "ST-006", "v": "IGHV3-13*01", "j": "IGHJ4*02", "cdr3": "CASPIVGANTKGGGLGFDYW", "iso": "IgG2", "kd": 1.4085176931023297e-08, "nmut": 9, "cdrR": 8, "frR": 0, "tier": "B", "tm": 71.0, "titre": 2.6, "agg": 1.8, "visc": 9.0, "sol": 95.0, "pi": 9.47, "mhcii": 3, "fails": ["binding KD 1.41e-08 M >= 1 nM"], "warns": ["pI 9.5 outside 6.0-9.0"], "vh": "EVQLVESGGGLVQPGGSLRLSCAASGLTFSSYDMHWVRQATGKGLEWVSAIGTVGDTYYPGSVKGRFTISRENAKNSLYLQMNSLRAGDTAVYYCGSPTVRANTKGRRLGFDYRGQGTLVTVSS", "backmut": 0, "humanness": 0.9274}, {"name": "ST-007", "v": "IGHV3-13*01", "j": "IGHJ4*02", "cdr3": "CASPIVGANTKGGGLGFDYW", "iso": "IgG2", "kd": 1.4085176931023297e-08, "nmut": 11, "cdrR": 8, "frR": 0, "tier": "B", "tm": 71.0, "titre": 2.6, "agg": 1.8, "visc": 9.0, "sol": 95.0, "pi": 9.64, "mhcii": 3, "fails": ["binding KD 1.41e-08 M >= 1 nM"], "warns": ["pI 9.6 outside 6.0-9.0"], "vh": "EVQLVESGGGLVQPGGSLRLSCAASGFTFSRYDMHWVRQATGKGLEWVSAIGTVGDTYYPGSVKGRFTISRENAKNSLYLQMNSLRAGDTAVYYCGSPTVRANTKGRRLGFDYRGQGTLVTVSS", "backmut": 0, "humanness": 0.9113}, {"name": "ST-008", "v": "IGHV3-13*01", "j": "IGHJ4*02", "cdr3": "CASPIVGANTKGGGLGFDYW", "iso": "IgG2", "kd": 1.4311645017663173e-08, "nmut": 11, "cdrR": 9, "frR": 1, "tier": "B", "tm": 71.0, "titre": 2.6, "agg": 1.8, "visc": 9.0, "sol": 95.0, "pi": 9.3, "mhcii": 4, "fails": ["binding KD 1.43e-08 M >= 1 nM"], "warns": ["pI 9.3 outside 6.0-9.0"], "vh": "EVQLVESGGGLVQPGGSLRLSCAASGFTFSSFDMHWVRQATGKGLEWVSAIGTVGDTYYPGSVKGRFTISRENAKNSLYLQMNSLRAGDTAVYYCGSPTERANTKGRRLGFDYRGQGTLVTVSS", "backmut": 1, "humanness": 0.9194}, {"name": "ST-009", "v": "IGHV3-13*01", "j": "IGHJ4*02", "cdr3": "CASPIVGANTKGGGLGFDYW", "iso": "IgG2", "kd": 1.4486386604529403e-08, "nmut": 11, "cdrR": 9, "frR": 0, "tier": "B", "tm": 71.0, "titre": 2.6, "agg": 1.8, "visc": 9.0, "sol": 95.0, "pi": 9.47, "mhcii": 3, "fails": ["binding KD 1.45e-08 M >= 1 nM"], "warns": ["pI 9.5 outside 6.0-9.0"], "vh": "EVQLVESGGGLVQPGGSLRLSCAASGFTFSSYDMHWVRQATGKGLEWVSAFGTVGDTYYPGSVKGRFTISRENAKNSLYLQMNSLRAGDTAVYYCGSPTVRATTKGRRLGFDYRGQGTLVTVSS", "backmut": 0, "humanness": 0.9113}, {"name": "ST-010", "v": "IGHV3-13*01", "j": "IGHJ4*02", "cdr3": "CASPIVGANTKGGGLGFDYW", "iso": "IgG2", "kd": 1.4486386604529403e-08, "nmut": 11, "cdrR": 9, "frR": 0, "tier": "B", "tm": 71.0, "titre": 2.6, "agg": 1.8, "visc": 9.0, "sol": 95.0, "pi": 9.47, "mhcii": 3, "fails": ["binding KD 1.45e-08 M >= 1 nM"], "warns": ["pI 9.5 outside 6.0-9.0"], "vh": "EVQLVESGGGLVQPGGSLRLSCAASGFTFSSYDMHWVRQATGKGLEWVSAIGIVGDTYYPGSVKGRFTISRENAKNSLYLQMNSLRAGDTAVYYCGSPTVRATTKGRRLGFDYRGQGTLVTVSS", "backmut": 0, "humanness": 0.9113}, {"name": "ST-011", "v": "IGHV3-13*01", "j": "IGHJ4*02", "cdr3": "CASPIVGANTKGGGLGFDYW", "iso": "IgG2", "kd": 1.4486386604529403e-08, "nmut": 9, "cdrR": 8, "frR": 0, "tier": "B", "tm": 71.0, "titre": 2.6, "agg": 1.8, "visc": 9.0, "sol": 95.0, "pi": 9.47, "mhcii": 3, "fails": ["binding KD 1.45e-08 M >= 1 nM"], "warns": ["pI 9.5 outside 6.0-9.0"], "vh": "EVQLVESGGGLVQPGGSLRLSCAASGFTFSSYDMHWVRQATGKGLEWVSAIGTVGDTYYPGSVKGRFTISRENAKNSLYLQMNSLRAGDTAVYYCGSPTVRATTKGRRLGFDYRGQGTLVTVSS", "backmut": 0, "humanness": 0.9274}], "harvest": {"n_sorted": 2000, "n_paired": 146, "n_unique": 97}}</script>
+<script>
+const D = JSON.parse(document.getElementById('simdata').textContent);
+const C = {deep:'#1b4965', mid:'#5fa8d3', pale:'#9fd3e8', red:'#c1121f', green:'#2a9d8f',
+           orange:'#e76f51', grey:'#8d99ae', amber:'#d99a05', line:'#dde5ec', mute:'#8295a5'};
+const NS = 'http://www.w3.org/2000/svg';
+
+function svg(w,h){const s=document.createElementNS(NS,'svg');
+  s.setAttribute('viewBox',`0 0 ${w} ${h}`); s.setAttribute('width','100%');
+  s.style.height='auto'; s.style.overflow='visible'; return s;}
+function add(p,t,a,txt){const e=document.createElementNS(NS,t);
+  for(const k in a) e.setAttribute(k,a[k]); if(txt!=null) e.textContent=txt; p.appendChild(e); return e;}
+function T(p,x,y,txt,o={}){return add(p,'text',Object.assign(
+  {x,y,'font-size':o.s||11,fill:o.f||C.mute,'text-anchor':o.a||'start',
+   'font-weight':o.w||400,'font-family':o.mono?'ui-monospace,Menlo,monospace':'inherit'},o.extra||{}),txt);}
+function fmtKd(x){const v=Math.pow(10,x);
+  if(v>=1e-6) return (v*1e6).toPrecision(2)+' µM';
+  if(v>=1e-9) return (v*1e9).toPrecision(2)+' nM';
+  return (v*1e12).toPrecision(2)+' pM';}
+function mount(id){const d=document.getElementById(id); d.innerHTML=''; return d;}
+
+/* ---------- headline stats ---------- */
+(function(){
+  const c=D.cycles, last=c[c.length-1], first=c[0];
+  const fold=Math.pow(10, first.median-last.median);
+  const items=[
+    {v:fold.toFixed(0)+'×', k:'群体亲和力提升', d:`中位 ${fmtKd(first.median)} → ${fmtKd(last.median)}`},
+    {v:fmtKd(last.best), k:'最佳克隆亲和力', d:`30 轮生发中心循环之后`},
+    {v:first.n_clones+' → '+last.n_clones, k:'克隆数坍缩', d:`优势克隆占 ${(last.top_clone_frac*100).toFixed(0)}%`},
+  ];
+  const w=mount('headline');
+  items.forEach(i=>{const d=document.createElement('div'); d.className='stat';
+    d.innerHTML=`<div class="v">${i.v}</div><div class="k">${i.k}</div><div class="d">${i.d}</div>`;
+    w.appendChild(d);});
+})();
+
+/* ---------- antigen sequence ---------- */
+(function(){
+  const m=D.meta, ep=m.epitope, box=mount('agseq');
+  let html='';
+  for(let i=0;i<m.antigen_seq.length;i++){
+    const inEp = (i+1)>=ep.start && (i+1)<=ep.end;
+    html += inEp ? `<span style="background:${C.deep};color:#fff;padding:1px 0">${m.antigen_seq[i]}</span>`
+                 : `<span style="color:#7d8e9c">${m.antigen_seq[i]}</span>`;
+  }
+  box.innerHTML=html;
+  document.getElementById('agnote').innerHTML =
+    `成熟链 ${m.antigen_len} aa（UniProt 前体去掉 18 aa 信号肽）。被选为靶点的表位 <b>${ep.name}</b>：
+     第 ${ep.start}–${ep.end} 位，<code>${ep.seq}</code>。${ep.notes}`;
+})();
+
+/* ---------- MHC-II peptides ---------- */
+(function(){
+  const ps=D.presentation.top_peptides.slice(0,8), W=640, rowH=26, H=ps.length*rowH+28;
+  const s=svg(W,H), mx=Math.max(...ps.map(p=>p.score)), x0=250;
+  ps.forEach((p,i)=>{
+    const y=i*rowH+16;
+    T(s,x0-10,y+4,`${p.peptide}`,{a:'end',mono:true,s:11.5,f:'#44586a'});
+    T(s,x0-10,y+16,`位置 ${p.start} · 核心 ${p.core}`,{a:'end',s:10});
+    const w=Math.max(2,(p.score/mx)*(W-x0-70));
+    add(s,'rect',{x:x0,y:y-6,width:w,height:14,rx:3,fill:i===0?C.deep:C.mid,opacity:i===0?1:0.55});
+    T(s,x0+w+7,y+5,p.score.toFixed(1),{s:11,f:'#44586a'});
+  });
+  T(s,x0,H-4,'凹槽贴合得分（越高越容易被呈递）',{s:10.5});
+  mount('mhcii').appendChild(s);
+})();
+
+/* ---------- V(D)J junction anatomy ---------- */
+(function(){
+  const v=D.vdj_example, j=v.junction, W=900, H=220, s=svg(W,H);
+  const parts=[
+    {lab:'V 片段 '+v.v, col:C.deep, len:34, type:'seg'},
+    {lab:'啃掉 '+j.trim_v, col:'#e8edf1', len:Math.max(j.trim_v,0)*1.6, type:'trim'},
+    {lab:'P '+j.p_v, col:C.amber, len:j.p_v*1.6, type:'p'},
+    {lab:'N '+j.n1.length, col:C.orange, len:j.n1.length*1.6, type:'n', seq:j.n1},
+    {lab:'P '+j.p_d_left, col:C.amber, len:j.p_d_left*1.6, type:'p'},
+    {lab:'啃掉 '+j.trim_d_left, col:'#e8edf1', len:j.trim_d_left*1.6, type:'trim'},
+    {lab:'D 片段 '+(v.d||''), col:C.green, len:20, type:'seg'},
+    {lab:'啃掉 '+j.trim_d_right, col:'#e8edf1', len:j.trim_d_right*1.6, type:'trim'},
+    {lab:'P '+j.p_d_right, col:C.amber, len:j.p_d_right*1.6, type:'p'},
+    {lab:'N '+j.n2.length, col:C.orange, len:j.n2.length*1.6, type:'n', seq:j.n2},
+    {lab:'P '+j.p_j, col:C.amber, len:j.p_j*1.6, type:'p'},
+    {lab:'啃掉 '+j.trim_j, col:'#e8edf1', len:j.trim_j*1.6, type:'trim'},
+    {lab:'J 片段 '+v.j, col:C.mid, len:30, type:'seg'},
+  ].filter(p=>p.len>0.5);
+  const total=parts.reduce((a,p)=>a+p.len,0), scale=(W-40)/total;
+  let x=20;
+  parts.forEach((p,i)=>{
+    const w=p.len*scale;
+    add(s,'rect',{x,y:60,width:Math.max(w,1.5),height:36,rx:3,fill:p.col,
+      stroke:p.type==='trim'?'#c9d4dd':'none','stroke-dasharray':p.type==='trim'?'3 2':''});
+    const lab=T(s,x+w/2,114+(i%2)*15,p.lab,{a:'middle',s:10,f:p.type==='trim'?C.mute:'#44586a'});
+    add(s,'line',{x1:x+w/2,y1:98,x2:x+w/2,y2:106+(i%2)*15,stroke:'#c9d4dd','stroke-width':.7});
+    if(p.seq) T(s,x+w/2,52,p.seq,{a:'middle',s:9.5,mono:true,f:C.orange});
+    x+=w;
+  });
+  T(s,20,30,'重排后的 CDR3 区（抗体最可变的环）',{s:12,f:'#10212e',w:600});
+  T(s,20,166,'CDR3 氨基酸序列：',{s:11});
+  T(s,145,166,v.cdr3_aa,{s:14,mono:true,f:C.deep,w:650});
+  T(s,20,190,`完整重链可变区 ${v.seq_len_nt} nt / ${v.seq_aa.length} aa　·　TdT 随机添加 ${j.n1.length+j.n2.length} 个 N 核苷酸　·　回文 P 核苷酸 ${j.p_v+j.p_j+j.p_d_left+j.p_d_right} 个`,{s:11});
+  mount('junction').appendChild(s);
+})();
+
+/* ---------- frame donut ---------- */
+(function(){
+  const r=D.repertoire, W=320,H=190,s=svg(W,H);
+  const prod=r.productive_fraction, cx=85,cy=92,R=58,r0=34;
+  const segs=[{v:prod,c:C.deep,l:'生产性重排'},{v:1-prod,c:'#e3eaf0',l:'读框错位或含终止密码子'}];
+  let a0=-Math.PI/2;
+  segs.forEach(sg=>{
+    const a1=a0+sg.v*2*Math.PI, big=sg.v>0.5?1:0;
+    const p=`M ${cx+R*Math.cos(a0)} ${cy+R*Math.sin(a0)} A ${R} ${R} 0 ${big} 1 ${cx+R*Math.cos(a1)} ${cy+R*Math.sin(a1)} L ${cx+r0*Math.cos(a1)} ${cy+r0*Math.sin(a1)} A ${r0} ${r0} 0 ${big} 0 ${cx+r0*Math.cos(a0)} ${cy+r0*Math.sin(a0)} Z`;
+    add(s,'path',{d:p,fill:sg.c}); a0=a1;
+  });
+  T(s,cx,cy+2,(prod*100).toFixed(1)+'%',{a:'middle',s:19,f:C.deep,w:650});
+  T(s,cx,cy+17,'生产性',{a:'middle',s:10});
+  T(s,165,70,'读框内比例',{s:11,f:'#44586a',w:600});
+  T(s,165,86,(D.cycles?'':'')+'33.6%（理论 1/3）',{s:11});
+  T(s,165,112,'再扣掉终止密码子',{s:11,f:'#44586a',w:600});
+  T(s,165,128,'→ '+(prod*100).toFixed(1)+'% 可用',{s:11});
+  mount('framepie').appendChild(s);
+})();
+
+/* ---------- repertoire funnel ---------- */
+(function(){
+  const r=D.repertoire, W=430, rows=[
+    {l:'尝试重排',v:r.attempted,c:C.grey},
+    {l:'生产性重排',v:r.productive,c:C.mid},
+    {l:'可完成 IMGT 标注',v:r.annotated,c:C.mid},
+    {l:'通过自身筛查',v:r.naive,c:C.deep},
+  ], H=rows.length*42+16, s=svg(W,H), mx=rows[0].v, x0=130;
+  rows.forEach((row,i)=>{
+    const y=i*42+20, w=(row.v/mx)*(W-x0-78);
+    add(s,'rect',{x:x0,y:y-11,width:Math.max(w,2),height:22,rx:3,fill:row.c});
+    T(s,x0-10,y+4,row.l,{a:'end',s:12,f:'#44586a'});
+    T(s,x0+w+8,y+4,row.v.toLocaleString(),{s:11.5,f:'#44586a',w:600});
+    if(i>0){const pct=(row.v/rows[i-1].v*100).toFixed(0);
+      T(s,x0+w+8,y+16,'保留 '+pct+'%',{s:10});}
+  });
+  mount('funnel').appendChild(s);
+})();
+
+/* ---------- tolerance bar ---------- */
+(function(){
+  const r=D.repertoire, tot=r.deleted+r.anergic+r.naive, W=720,H=150,s=svg(W,H);
+  const segs=[{v:r.deleted,c:C.red,l:'删除',d:'自身反应性过强，直接凋亡'},
+              {v:r.anergic,c:C.amber,l:'失能',d:'活着但被功能性沉默，不能进生发中心'},
+              {v:r.naive,c:C.green,l:'成为 naive B 细胞',d:'通过筛查，可参与免疫应答'}];
+  let x=20;
+  segs.forEach(sg=>{
+    const w=sg.v/tot*(W-40);
+    add(s,'rect',{x,y:30,width:w,height:40,rx:3,fill:sg.c});
+    T(s,x+w/2,55,(sg.v/tot*100).toFixed(1)+'%',{a:'middle',s:13,f:'#fff',w:650});
+    x+=w;
+  });
+  segs.forEach((sg,i)=>{
+    const y=96+i*17;
+    add(s,'rect',{x:20,y:y-8,width:10,height:10,rx:2,fill:sg.c});
+    T(s,36,y+1,sg.l+'：'+sg.v.toLocaleString()+' 个细胞 — '+sg.d,{s:11.5,f:'#44586a'});
+  });
+  T(s,20,22,'每 '+tot.toLocaleString()+' 个完成重排并可标注的未成熟 B 细胞',{s:11});
+  mount('tolbar').appendChild(s);
+})();
+</script>
+
+<script>
+/* ---------- S5F mutability profile ---------- */
+(function(){
+  const d=D.s5f, W=900,H=200,pad={l:48,r:14,t:16,b:30}, s=svg(W,H);
+  const n=d.mutability.length, mx=Math.max(...d.mutability);
+  const X=i=>pad.l+(i/(n-1))*(W-pad.l-pad.r);
+  const Y=v=>H-pad.b-(v/mx)*(H-pad.t-pad.b);
+  // region bands
+  let i=0;
+  while(i<d.regions.length){
+    let j=i; while(j<d.regions.length && d.regions[j]===d.regions[i]) j++;
+    const isCdr=d.regions[i].startsWith('cdr');
+    add(s,'rect',{x:X(Math.min(i,n-1)),y:pad.t,width:Math.max(1,X(Math.min(j,n-1))-X(Math.min(i,n-1))),
+      height:H-pad.t-pad.b,fill:isCdr?'#fde2e4':'#eef2f5'});
+    if(j-i>18) T(s,(X(Math.min(i,n-1))+X(Math.min(j,n-1)))/2,H-pad.b+13,
+      d.regions[i].toUpperCase().replace('FWR','FR'),{a:'middle',s:9.5,f:isCdr?'#b0515c':C.mute});
+    i=j;
+  }
+  let path='';
+  d.mutability.forEach((v,k)=>{path+=(k?'L':'M')+X(k).toFixed(1)+' '+Y(v).toFixed(1)+' ';});
+  add(s,'path',{d:path,fill:'none',stroke:C.deep,'stroke-width':1});
+  add(s,'line',{x1:pad.l,y1:Y(d.mean),x2:W-pad.r,y2:Y(d.mean),stroke:C.red,'stroke-width':1,'stroke-dasharray':'4 3'});
+  T(s,W-pad.r-2,Y(d.mean)-5,'平均可变性',{a:'end',s:10,f:C.red});
+  T(s,10,pad.t+6,'高',{s:10}); T(s,10,H-pad.b,'低',{s:10});
+  T(s,10,(pad.t+H-pad.b)/2,'可变性',{s:10,extra:{transform:`rotate(-90 10 ${(pad.t+H-pad.b)/2})`},a:'middle'});
+  mount('s5f').appendChild(s);
+  document.getElementById('s5fnote').innerHTML =
+    `同一条序列上，最易突变与最难突变的位点相差 <b>${d.fold_range.toFixed(0)} 倍</b>。
+     模型查的是 ${d.n_fivemers} 个五聚体上下文组成的查找表，不是任何人为规则。
+     经典 AID 热点 WRCY/RGYW 的可变性约为非热点的 <b>2.9 倍</b> —— 这是从数据里涌现的，没有被写进代码。`;
+})();
+
+/* ---------- GC cycle player ---------- */
+(function(){
+  const cs=D.cycles, bins=D.bins, N=cs.length;
+  const slider=document.getElementById('cyc'), lbl=document.getElementById('cycv');
+  const btn=document.getElementById('play'); let timer=null;
+
+  function histChart(c){
+    const W=440,H=215,pad={l:40,r:12,t:12,b:38}, s=svg(W,H);
+    const mx=Math.max(...cs.map(x=>Math.max(...x.hist)));
+    const bw=(W-pad.l-pad.r)/c.hist.length;
+    c.hist.forEach((v,i)=>{
+      const h=(v/mx)*(H-pad.t-pad.b);
+      add(s,'rect',{x:pad.l+i*bw,y:H-pad.b-h,width:Math.max(bw-1,1),height:h,fill:C.mid,rx:1});
+    });
+    [-10,-9,-8,-7,-6,-5].forEach(v=>{
+      const x=pad.l+((v-bins[0])/(bins[bins.length-1]-bins[0]))*(W-pad.l-pad.r);
+      if(x>=pad.l&&x<=W-pad.r){
+        add(s,'line',{x1:x,y1:H-pad.b,x2:x,y2:H-pad.b+4,stroke:'#c9d4dd'});
+        T(s,x,H-pad.b+16,'10'+String(v).replace('-','⁻').replace(/\d/g,d=>'⁰¹²³⁴⁵⁶⁷⁸⁹'[d]),{a:'middle',s:10});}
+    });
+    const xb=pad.l+((c.best-bins[0])/(bins[bins.length-1]-bins[0]))*(W-pad.l-pad.r);
+    add(s,'line',{x1:xb,y1:pad.t,x2:xb,y2:H-pad.b,stroke:C.red,'stroke-width':1.4});
+    T(s,xb,pad.t-1,'最佳',{a:'middle',s:10,f:C.red});
+    T(s,W/2,H-6,'亲和力 K_D (M) · 越左越强',{a:'middle',s:10.5});
+    T(s,pad.l,pad.t+8,'细胞数',{s:10});
+    return s;
+  }
+  function flowChart(c){
+    const W=440,H=215,s=svg(W,H);
+    const rows=[{l:'进入暗区',v:c.n_entering,c:C.deep},
+                {l:'分裂后进入亮区',v:c.n_after_division,c:C.mid},
+                {l:'抢到 Tfh 帮助',v:c.n_selected,c:C.green},
+                {l:'凋亡（没抢到）',v:c.n_apoptosis,c:C.red},
+                {l:'→ 浆细胞',v:c.plasma_out,c:C.orange},
+                {l:'→ 记忆 B 细胞',v:c.memory_out,c:C.amber}];
+    const mx=Math.max(...cs.map(x=>x.n_after_division)), x0=132;
+    rows.forEach((r,i)=>{
+      const y=22+i*31, w=Math.max(2,(r.v/mx)*(W-x0-62));
+      add(s,'rect',{x:x0,y:y-10,width:w,height:20,rx:3,fill:r.c});
+      T(s,x0-9,y+4,r.l,{a:'end',s:11.5,f:'#44586a'});
+      T(s,x0+w+7,y+4,r.v.toLocaleString(),{s:11,f:'#44586a',w:600});
+    });
+    T(s,x0,H-10,'FDC 上剩余抗原 '+(c.antigen_molar*1e9).toFixed(2)+' nM',{s:10.5,f:C.mute});
+    return s;
+  }
+  function cloneBands(c){
+    const W=900,H=42,s=svg(W,H);
+    const tot=c.top_clones.reduce((a,b)=>a+b.n,0) || 1;
+    const pal=[C.deep,C.mid,C.green,C.orange,C.amber,C.pale,C.grey,'#b0515c'];
+    let x=0;
+    c.top_clones.forEach((cl,i)=>{
+      const w=(cl.n/tot)*W;
+      add(s,'rect',{x,y:6,width:Math.max(w,1),height:22,fill:pal[i%pal.length]});
+      if(w>52) T(s,x+w/2,21,'#'+cl.id,{a:'middle',s:10,f:'#fff',w:600});
+      x+=w;
+    });
+    T(s,0,40,`${c.n_clones} 个克隆存活 · 优势克隆占 ${(c.top_clone_frac*100).toFixed(0)}% · 多样性指数 ${c.shannon.toFixed(2)}`,{s:10.5});
+    return s;
+  }
+  function stats(c){
+    const w=mount('gcstats');
+    [[fmtKd(c.median),'群体中位亲和力',''],
+     [fmtKd(c.best),'最佳克隆',''],
+     [c.mut.toFixed(1),'每个细胞平均突变数','CDR 替换 '+c.cdrR.toFixed(1)+' · 框架替换 '+c.frR.toFixed(1)]]
+    .forEach(([v,k,d])=>{const e=document.createElement('div'); e.className='stat';
+      e.innerHTML=`<div class="v">${v}</div><div class="k">${k}</div>${d?`<div class="d">${d}</div>`:''}`;
+      w.appendChild(e);});
+  }
+  function render(i){
+    const c=cs[i];
+    lbl.textContent=`${c.t} / ${N}`;
+    mount('hist').appendChild(histChart(c));
+    mount('flow').appendChild(flowChart(c));
+    mount('clones').appendChild(cloneBands(c));
+    stats(c);
+  }
+  slider.addEventListener('input',()=>render(+slider.value-1));
+  btn.addEventListener('click',()=>{
+    if(timer){clearInterval(timer);timer=null;btn.textContent='▶ 播放';btn.classList.add('primary');return;}
+    btn.textContent='⏸ 暂停'; btn.classList.remove('primary');
+    let i=+slider.value-1; if(i>=N-1) i=0;
+    timer=setInterval(()=>{
+      i++; if(i>=N){clearInterval(timer);timer=null;btn.textContent='▶ 播放';btn.classList.add('primary');return;}
+      slider.value=i+1; render(i);
+    },420);
+  });
+  render(0);
+
+  /* CDR vs FR per-site rates */
+  (function(){
+    const regs=D.s5f.regions;
+    const cdrNt=regs.filter(r=>r.startsWith('cdr')).length;
+    const frNt=regs.filter(r=>r.startsWith('fwr')).length;
+    const W=430,H=190,pad={l:44,r:52,t:14,b:30},s=svg(W,H);
+    const cdr=cs.map(c=>c.cdrR/cdrNt*100), fr=cs.map(c=>c.frR/frNt*100);
+    const mx=Math.max(...cdr,...fr)*1.12;
+    const X=i=>pad.l+(i/(N-1))*(W-pad.l-pad.r), Y=v=>H-pad.b-(v/mx)*(H-pad.t-pad.b);
+    [[cdr,C.red,'CDR'],[fr,C.grey,'框架']].forEach(([arr,col,lab])=>{
+      let p=''; arr.forEach((v,i)=>p+=(i?'L':'M')+X(i)+' '+Y(v)+' ');
+      add(s,'path',{d:p,fill:'none',stroke:col,'stroke-width':2});
+      T(s,X(N-1)+5,Y(arr[N-1])+4,lab,{s:11,f:col,w:600});
+    });
+    T(s,pad.l,pad.t+2,'每 100 nt 替换突变数',{s:10});
+    T(s,W/2-10,H-6,'生发中心周期',{a:'middle',s:10.5});
+    const ratio=(cdr[N-1]/fr[N-1]).toFixed(1);
+    T(s,pad.l+6,pad.t+20,'最终 CDR 是框架的 '+ratio+' 倍',{s:11,f:C.red,w:600});
+    mount('cdrfr').appendChild(s);
+  })();
+
+  /* diversity */
+  (function(){
+    const W=430,H=190,pad={l:44,r:48,t:14,b:30},s=svg(W,H);
+    const nc=cs.map(c=>c.n_clones), tf=cs.map(c=>c.top_clone_frac*100);
+    const mxl=Math.log10(Math.max(...nc));
+    const X=i=>pad.l+(i/(N-1))*(W-pad.l-pad.r);
+    const Yl=v=>H-pad.b-(Math.log10(Math.max(v,1))/mxl)*(H-pad.t-pad.b);
+    const Yr=v=>H-pad.b-(v/100)*(H-pad.t-pad.b);
+    let p=''; nc.forEach((v,i)=>p+=(i?'L':'M')+X(i)+' '+Yl(v)+' ');
+    add(s,'path',{d:p,fill:'none',stroke:C.deep,'stroke-width':2});
+    let q=''; tf.forEach((v,i)=>q+=(i?'L':'M')+X(i)+' '+Yr(v)+' ');
+    add(s,'path',{d:q,fill:'none',stroke:C.orange,'stroke-width':1.6,'stroke-dasharray':'4 3'});
+    [1,10,100].forEach(v=>{if(v<=Math.max(...nc)){
+      T(s,pad.l-6,Yl(v)+4,String(v),{a:'end',s:10});}});
+    T(s,pad.l,pad.t-1,'存活克隆数',{s:10,f:C.deep});
+    T(s,W-pad.r+4,pad.t-1,'优势克隆 %',{s:10,f:C.orange});
+    T(s,W/2-10,H-6,'生发中心周期',{a:'middle',s:10.5});
+    mount('divchart').appendChild(s);
+  })();
+})();
+</script>
+
+<script>
+/* ---------- live Langmuir + selection gradient ---------- */
+(function(){
+  const agS=document.getElementById('agslider'), bS=document.getElementById('bslider');
+  const agV=document.getElementById('agv'), bV=document.getElementById('bv');
+  const XS=[]; for(let x=-11.5;x<=-4.5;x+=0.05) XS.push(x);
+  const A=(x,lag)=>1/(1+Math.pow(10,x-lag));
+  const G=(x,lag,b)=>b*Math.LN10*(1-A(x,lag));
+
+  function curve(id,fn,ymax,ylab,hi){
+    const W=430,H=215,pad={l:46,r:16,t:16,b:36},s=svg(W,H);
+    const X=x=>pad.l+((x+11.5)/7)*(W-pad.l-pad.r), Y=v=>H-pad.b-(v/ymax)*(H-pad.t-pad.b);
+    [-11,-10,-9,-8,-7,-6,-5].forEach(v=>{
+      add(s,'line',{x1:X(v),y1:pad.t,x2:X(v),y2:H-pad.b,stroke:'#eef2f5','stroke-width':1});
+      T(s,X(v),H-pad.b+15,String(v),{a:'middle',s:10});});
+    const lag=+agS.value;
+    add(s,'line',{x1:X(lag),y1:pad.t,x2:X(lag),y2:H-pad.b,stroke:C.amber,'stroke-width':1.3,'stroke-dasharray':'4 3'});
+    T(s,X(lag),pad.t-2,'K_D = [Ag]',{a:'middle',s:10,f:C.amber});
+    let p=''; XS.forEach((x,i)=>p+=(i?'L':'M')+X(x).toFixed(1)+' '+Y(fn(x)).toFixed(1)+' ');
+    add(s,'path',{d:p,fill:'none',stroke:hi,'stroke-width':2.2});
+    T(s,pad.l,pad.t+2,ylab,{s:10});
+    T(s,W/2,H-6,'克隆亲和力 log₁₀K_D (M)　←　更强',{a:'middle',s:10.5});
+    return s;
+  }
+  function draw(){
+    const lag=+agS.value, b=+bS.value;
+    agV.textContent=(Math.pow(10,lag)*1e9).toPrecision(2)+' nM';
+    bV.textContent=b.toFixed(1);
+    mount('langmuir').appendChild(curve('langmuir',x=>A(x,lag),1.05,'捕获量 A（0–1）',C.deep));
+    mount('gradient').appendChild(curve('gradient',x=>G(x,lag,b),3*Math.LN10,'选择优势',C.red));
+  }
+  agS.addEventListener('input',draw); bS.addEventListener('input',draw); draw();
+})();
+
+/* ---------- lineage tree ---------- */
+(function(){
+  const L=D.lineage, nodes=L.nodes, W=900,H=430,pad={l:56,r:120,t:24,b:44},s=svg(W,H);
+  const mxm=Math.max(...nodes.map(n=>n.nmut));
+  const kds=nodes.filter(n=>n.kd!=null).map(n=>n.kd);
+  const kmin=Math.min(...kds), kmax=Math.max(...kds);
+  const X=m=>pad.l+(m/mxm)*(W-pad.l-pad.r);
+  // vertical layout: spread nodes within each mutation column
+  const byM={}; nodes.forEach(n=>{(byM[n.nmut]=byM[n.nmut]||[]).push(n);});
+  Object.keys(byM).forEach(m=>{
+    const g=byM[m], span=H-pad.t-pad.b;
+    g.forEach((n,i)=>{n._y=pad.t+span*((i+0.5)/g.length);});
+  });
+  const col=n=>{ if(n.kd==null) return '#c9d4dd';
+    const t=(n.kd-kmax)/(kmin-kmax);
+    const c1=[159,211,232], c2=[16,33,46];
+    return `rgb(${c1.map((v,i)=>Math.round(v+(c2[i]-v)*t)).join(',')})`;};
+  nodes.forEach(n=>{ if(n.parent==null) return;
+    const p=nodes[n.parent];
+    add(s,'path',{d:`M ${X(p.nmut)} ${p._y} C ${(X(p.nmut)+X(n.nmut))/2} ${p._y}, ${(X(p.nmut)+X(n.nmut))/2} ${n._y}, ${X(n.nmut)} ${n._y}`,
+      fill:'none',stroke:'#d8e2ea','stroke-width':.8});});
+  nodes.forEach(n=>{
+    const r=n.n>0?Math.min(9,2.4+Math.sqrt(n.n)*0.9):2.2;
+    add(s,'circle',{cx:X(n.nmut),cy:n._y,r,fill:col(n),stroke:'#fff','stroke-width':.8});});
+  [0,Math.round(mxm/2),mxm].forEach(m=>{
+    add(s,'line',{x1:X(m),y1:H-pad.b+4,x2:X(m),y2:H-pad.b+9,stroke:'#c9d4dd'});
+    T(s,X(m),H-pad.b+22,m+' 个突变',{a:'middle',s:10.5});});
+  T(s,pad.l,16,'胚系（未突变）',{s:10.5,f:C.mute});
+  T(s,W-pad.r,16,'突变最多的后代',{a:'end',s:10.5,f:C.mute});
+  // colour legend
+  const lx=W-pad.r+22;
+  T(s,lx,pad.t+2,'亲和力',{s:10.5,f:'#44586a',w:600});
+  for(let i=0;i<=40;i++){
+    const t=i/40;
+    const c1=[159,211,232],c2=[16,33,46];
+    add(s,'rect',{x:lx,y:pad.t+12+i*4,width:14,height:4,
+      fill:`rgb(${c1.map((v,k)=>Math.round(v+(c2[k]-v)*t)).join(',')})`});}
+  T(s,lx+20,pad.t+18,fmtKd(kmax),{s:10});
+  T(s,lx+20,pad.t+14+160,fmtKd(kmin),{s:10});
+  T(s,lx,pad.t+200,'圆点大小 =',{s:10});
+  T(s,lx,pad.t+213,'该序列的细胞数',{s:10});
+  mount('tree').appendChild(s);
+  document.getElementById('treenote').innerHTML =
+    `优势克隆 <b>#${L.clone_id}</b>（${L.v_gene} / ${L.d_gene} / ${L.j_gene}，胚系 CDR3 <code>${L.germline_cdr3}</code>）
+     在本次应答中产生了 <b>${L.n_unique_total.toLocaleString()}</b> 条不同的序列，最多累积 <b>${L.max_mutations}</b> 个突变。
+     上图按突变数分层抽样展示其中 ${L.n_nodes} 个节点。每条连线是一次突变事件，颜色越深亲和力越高——
+     这就是"一轮一轮优化"在序列层面的真实样子。`;
+})();
+
+/* ---------- serum titre ---------- */
+(function(){
+  const sr=D.serum, W=900,H=230,pad={l:58,r:62,t:18,b:38},s=svg(W,H);
+  const N=sr.length, t=sr.map(x=>x.titre_au), pk=sr.map(x=>x.mean_pkd);
+  const mt=Math.max(...t)*1.08, pmin=Math.min(...pk.filter(v=>v>0)), pmax=Math.max(...pk);
+  const X=i=>pad.l+(i/(N-1))*(W-pad.l-pad.r);
+  const Yt=v=>H-pad.b-(v/mt)*(H-pad.t-pad.b);
+  const Yp=v=>H-pad.b-((v-pmin)/(pmax-pmin||1))*(H-pad.t-pad.b);
+  let a=`M ${X(0)} ${H-pad.b} `; t.forEach((v,i)=>a+=`L ${X(i)} ${Yt(v)} `); a+=`L ${X(N-1)} ${H-pad.b} Z`;
+  add(s,'path',{d:a,fill:C.green,opacity:.14});
+  let p=''; t.forEach((v,i)=>p+=(i?'L':'M')+X(i)+' '+Yt(v)+' ');
+  add(s,'path',{d:p,fill:'none',stroke:C.green,'stroke-width':2.4});
+  let q=''; pk.forEach((v,i)=>{if(v>0) q+=(q?'L':'M')+X(i)+' '+Yp(v)+' ';});
+  add(s,'path',{d:q,fill:'none',stroke:C.orange,'stroke-width':2,'stroke-dasharray':'5 3'});
+  T(s,pad.l,pad.t-2,'血清抗体量',{s:11,f:C.green,w:600});
+  T(s,W-pad.r+6,pad.t-2,'平均 pK_D',{s:11,f:C.orange,w:600});
+  T(s,W-pad.r+6,Yp(pmax)+4,pmax.toFixed(1),{s:10,f:C.orange});
+  T(s,W-pad.r+6,Yp(pmin)+4,pmin.toFixed(1),{s:10,f:C.orange});
+  [1,10,20,30].forEach(c=>{if(c<=N) T(s,X(c-1),H-pad.b+16,String(c),{a:'middle',s:10});});
+  T(s,W/2,H-6,'生发中心周期',{a:'middle',s:10.5});
+  T(s,pad.l+10,pad.t+22,'滴度在涨，而且抗体质量同步在涨 —— 这就是亲和力成熟',{s:11.5,f:'#44586a'});
+  mount('serum').appendChild(s);
+})();
+
+/* ---------- leads table ---------- */
+(function(){
+  const tb=document.getElementById('leads');
+  tb.innerHTML='<thead><tr><th>候选</th><th>V 基因</th><th>CDR3</th><th>同种型</th>'+
+    '<th class="num">模拟 K_D</th><th class="num">突变</th><th class="num">Tm °C</th>'+
+    '<th class="num">滴度 g/L</th><th class="num">pI</th><th>判级</th><th>未通过项</th></tr></thead><tbody></tbody>';
+  const tbody=tb.querySelector('tbody');
+  D.leads.forEach(l=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="mono">${l.name}</td><td class="mono" style="font-size:12px">${l.v}</td>
+      <td class="mono" style="font-size:12px">${l.cdr3}</td><td>${l.iso}</td>
+      <td class="num">${fmtKd(Math.log10(l.kd))}</td>
+      <td class="num">${l.nmut} <span style="color:#8295a5;font-size:11px">(CDR ${l.cdrR})</span></td>
+      <td class="num">${l.tm}</td><td class="num">${l.titre}</td><td class="num">${l.pi}</td>
+      <td><span class="pill ${l.tier}">${l.tier}</span></td>
+      <td style="font-size:12px;color:#44586a">${l.fails.length?l.fails.join('；'):'—'}</td>`;
+    tbody.appendChild(tr);
+  });
+})();
+
+/* ---------- loop diagram ---------- */
+(function(){
+  const W=900,H=240,s=svg(W,H);
+  const steps=[['generate','孪生产出数据','含阴性样本'],['curate','清洗与归档','元数据不全即拒收'],
+               ['train','训练模型','按谱系切分'],['design','模型提设计','同时跑随机基线'],
+               ['test','测量','湿实验接口'],['evaluate','评估与归因','失败全部记录']];
+  const cx=W/2, cy=118, R=92;
+  steps.forEach((st,i)=>{
+    const a=-Math.PI/2+i*2*Math.PI/steps.length;
+    const x=cx+R*Math.cos(a)*2.9, y=cy+R*Math.sin(a)*0.84;
+    add(s,'rect',{x:x-74,y:y-27,width:148,height:54,rx:9,fill:'#fff',stroke:C.mid,'stroke-width':1.3});
+    T(s,x,y-8,st[0],{a:'middle',s:11.5,f:C.mid,w:700,mono:true});
+    T(s,x,y+7,st[1],{a:'middle',s:12,f:'#10212e',w:600});
+    T(s,x,y+20,st[2],{a:'middle',s:10,f:C.mute});
+    const a2=-Math.PI/2+(i+1)*2*Math.PI/steps.length;
+    const x2=cx+R*Math.cos(a2)*2.9, y2=cy+R*Math.sin(a2)*0.84;
+    const mx=(x+x2)/2, my=(y+y2)/2 + (Math.sin(a)>0? 34 : -34);
+    add(s,'path',{d:`M ${x+(x2>x?76:-76)} ${y} Q ${mx} ${my} ${x2+(x2>x?-76:76)} ${y2}`,
+      fill:'none',stroke:'#c9d4dd','stroke-width':1.3,'marker-end':'url(#ah)'});
+  });
+  const defs=add(s,'defs',{});
+  const mk=add(defs,'marker',{id:'ah',viewBox:'0 0 10 10',refX:9,refY:5,
+    markerWidth:6,markerHeight:6,orient:'auto-start-reverse'});
+  add(mk,'path',{d:'M 0 0 L 10 5 L 0 10 z',fill:'#c9d4dd'});
+  T(s,cx,H-12,'每一轮都把失败样本写回训练集 —— 这是闭环能复利的前提',{a:'middle',s:11.5,f:'#44586a'});
+  mount('loopdiag').appendChild(s);
+})();
+
+/* ---------- provenance table ---------- */
+(function(){
+  const rows=[
+    ['IGHV/IGHD/IGHJ 胚系片段与重排统计','真实数据','OLGA 默认模型（Sethna et al., <i>Bioinformatics</i> 2019）'],
+    ['体细胞高频突变靶向与替换','真实数据','HH_S5F，1024 个五聚体，由 806,860 个沉默突变推断（Yaari et al., <i>Front Immunol</i> 2013）'],
+    ['CDR/框架区边界','真实数据','IMGT 统一编号（Lefranc et al. 2003）+ 344 条 IMGT-gapped IGHV'],
+    ['抗原序列','真实数据','UniProt P00698 鸡蛋溶菌酶'],
+    ['自身抗原筛查面板','真实数据','8 条高丰度人类蛋白（UniProt）'],
+    ['氨基酸理化标度','真实数据','Janin 转移自由能、Kyte-Doolittle、残基体积'],
+    ['脾脏细胞组成','真实数据','CELLxGENE Census 2025-11-08：577,677 细胞 / 58 供体 / 110 类型'],
+    ['中枢耐受删除比例','已发表参数','Wardemann et al., <i>Science</i> 2003'],
+    ['SHM 速率 1e-3 /碱基/分裂','已发表参数','生发中心经典速率'],
+    ['Tfh 帮助名额','由数据导出','Tfh : 朴素 B = 0.110（上面的图谱）'],
+    ['竞争锐度 β = 1.6','<b>模型旋钮</b>','未测量，可调'],
+    ['抗原衰减 γ = 0.90','<b>模型旋钮</b>','未测量，可调'],
+    ['框架稳定性代价 0.18 kcal/mol','<b>模型旋钮</b>','未测量，可调'],
+    ['亲和力打分函数','<b>代理模型</b>','不是结合预测器；见下方说明'],
+    ['可开发性八维门控','<b>启发式</b>','基于序列的门控，不是性质预测器'],
+  ];
+  const t=document.getElementById('prov');
+  t.innerHTML='<thead><tr><th>组件</th><th>性质</th><th>来源</th></tr></thead><tbody>'+
+    rows.map(r=>`<tr><td>${r[0]}</td><td style="white-space:nowrap">${r[1]}</td><td style="color:#44586a">${r[2]}</td></tr>`).join('')+
+    '</tbody>';
+})();
+
+document.getElementById('footnote').innerHTML =
+  `本页所有数字来自随机种子 ${D.meta.seed} 的一次完整模拟：
+   ${D.repertoire.attempted.toLocaleString()} 次 V(D)J 重排尝试 → ${D.repertoire.naive.toLocaleString()} 个 naive B 细胞 →
+   ${D.cycles.length} 轮生发中心循环 → ${D.harvest.n_unique} 条独特抗体序列。页面可完全离线运行。`;
+</script>
+</body></html>
