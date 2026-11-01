@@ -153,6 +153,13 @@ spleen = Spleen(oracle=MyStructuralOracle())
 reformatter = ReformattingModule(platform="XenoMouse")
 ```
 
+## The affinity maturation model
+
+Written out as equations in [`docs/affinity-maturation-model.md`](docs/affinity-maturation-model.md),
+with the selection term derived and its ablation measured.
+
+![affinity maturation model](docs/affinity_maturation_model.png)
+
 ## Atlas grounding
 
 Organ composition is measured, not assumed. `spleen_twin.organ.load_reference()`
