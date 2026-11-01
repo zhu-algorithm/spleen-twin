@@ -3,6 +3,10 @@
 A digital-twin spleen that generates antibodies the way a spleen does — and
 then keeps improving them in a wet-dry closed loop.
 
+**→ [Interactive walkthrough](https://zhu-algorithm.github.io/spleen-twin/)** — every chart is driven by one seeded run of the simulation: V(D)J junction
+anatomy, the S5F mutability profile, a 30-cycle germinal-centre player, live
+selection-gradient curves, and the dominant clone's lineage tree.
+
 The package models the humoral response end to end as separable modules:
 antigen presentation, CD4⁺ T-cell help, V(D)J recombination, tolerance,
 B-cell activation, germinal-centre affinity maturation, class switching,
