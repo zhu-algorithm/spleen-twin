@@ -41,6 +41,7 @@ from ..modules.tolerance import ToleranceCheckpoint, ToleranceOutcome, pre_bcr_c
 from ..modules.vdj import ChainRecombinator
 from ..modules.receptor import EditingEvent
 from ..provenance import EvidenceClass, ParameterRecord, RunManifest
+from .dynamics import OrganState, aggregate_replicates
 
 
 @dataclass
@@ -72,6 +73,8 @@ class CampaignResult:
     serum_titre: list = field(default_factory=list)
     tfh: object = None
     presentation: object = None
+    uncertainty: dict = field(default_factory=dict)
+    organ_state: object = None
 
 
 class Spleen:
@@ -278,14 +281,18 @@ class Spleen:
         plasma, memory, histories = [], [], []
         for g in range(self.n_gcs):
             subset = founders[g * per_gc:(g + 1) * per_gc] or founders[:per_gc]
+            namespace = (g + 1) * 1_000_000_000
             gc = GerminalCenter(
                 self.oracle, epitope.sequence,
                 shm_engine=self.shm, class_switch=self.csr,
                 fdc_antigen_molar=presentation.fdc_antigen_nm * 1e-9,
                 rng=self.rng, **self.gc_kwargs,
             )
+            # Child IDs are allocated inside the GC; reserve a disjoint range
+            # per centre so lineage exports never alias across centres.
+            gc._next_id = namespace + 1_000_000
             gc.seed([
-                BCell(cell_id=c.cell_id, clone_id=c.clone_id, parent_id=None,
+                BCell(cell_id=namespace + c.cell_id, clone_id=namespace + c.clone_id, parent_id=None,
                       rearrangement=c.rearrangement, seq_nt=c.seq_nt,
                       regions=c.regions, cdr_index=c.cdr_index,
                       light_rearrangement=c.light_rearrangement,
@@ -300,6 +307,22 @@ class Spleen:
             histories.append(gc.history)
 
         titre = self.serum_titre(plasma, n_rounds)
+        final_best = [h[-1].best_log10_kd for h in histories if h]
+        final_diversity = [h[-1].shannon_diversity for h in histories if h]
+        uncertainty = {
+            "kind": "simulation_replicate_distribution",
+            "n_germinal_centers": self.n_gcs,
+            "final_best_log10_kd": aggregate_replicates(final_best),
+            "final_shannon_diversity": aggregate_replicates(final_diversity),
+        }
+        state = OrganState(
+            time_hours=n_rounds * 8.0,
+            antigen_nm=float(presentation.fdc_antigen_nm),
+            presented_antigen_nm=float(presentation.fdc_antigen_nm),
+            tfh_help=float(np.clip(tfh.quality, 0.0, 1.0)),
+            naive_b=len(self.naive_pool), gc_b=sum(len(gc.population) for gc in self.germinal_centers),
+            plasma_b=len(plasma), memory_b=len(memory),
+        )
         return CampaignResult(
             repertoire=self.repertoire_stats,
             n_founders=len(founders),
@@ -309,6 +332,8 @@ class Spleen:
             serum_titre=titre,
             tfh=tfh,
             presentation=presentation,
+            uncertainty=uncertainty,
+            organ_state=state,
         )
 
     # -- 5. antibody output -------------------------------------------------

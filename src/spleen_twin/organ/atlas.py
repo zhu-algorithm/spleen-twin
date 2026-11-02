@@ -98,7 +98,29 @@ class AtlasReference:
             "tfh_per_naive_b": round(self.tfh_per_naive_b, 4),
             "memory_per_plasma": round(self.memory_per_plasma, 3),
             "b_fraction_of_spleen": round(self.fraction("b_total"), 4),
+            "expression_available": self.expression_available,
         }
+
+    @property
+    def expression_available(self) -> bool:
+        return bool(self.raw.get("expression_by_cell_type"))
+
+    def expression(self, cell_type: str, gene: str) -> Optional[float]:
+        """Return mean expression when extracted; never fabricate missing data."""
+        block = self.raw.get("expression_by_cell_type") or {}
+        value = block.get(cell_type, {}).get(gene)
+        return None if value is None else float(value)
+
+    def validate(self) -> list[str]:
+        problems = []
+        if self.n_cells <= 0 or self.n_donors <= 0:
+            problems.append("atlas counts must be positive")
+        fractions = self.raw.get("fractions_of_spleen", {})
+        if any(not 0.0 <= float(v) <= 1.0 for v in fractions.values()):
+            problems.append("fractions must be in [0, 1]")
+        if self.expression_available and not self.raw.get("expression_provenance"):
+            problems.append("expression matrix requires expression_provenance")
+        return problems
 
 
 def load_reference(path: Optional[str] = None) -> AtlasReference:

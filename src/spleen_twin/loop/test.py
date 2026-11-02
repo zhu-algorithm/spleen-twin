@@ -29,7 +29,12 @@ def measure_proposals(
     """Score proposals and return them in curated-record shape."""
     out = []
     for i, p in enumerate(proposals):
-        paratope = {"cdr1": p.cdr1_aa, "cdr2": p.cdr2_aa, "cdr3": p.cdr3_aa}
+        if p.light_cdr3_aa:
+            paratope = {"h_cdr1": p.cdr1_aa, "h_cdr2": p.cdr2_aa, "h_cdr3": p.cdr3_aa,
+                        "l_cdr1": p.light_cdr1_aa, "l_cdr2": p.light_cdr2_aa,
+                        "l_cdr3": p.light_cdr3_aa}
+        else:
+            paratope = {"cdr1": p.cdr1_aa, "cdr2": p.cdr2_aa, "cdr3": p.cdr3_aa}
         res = oracle.score(paratope, epitope_seq)
         rec = AntibodyRecord(
             sequence_id=f"r{round_index}-{p.proposer}-{i:05d}",
@@ -37,6 +42,9 @@ def measure_proposals(
             v_call=p.v_call, d_call=None, j_call="",
             junction_aa=p.cdr3_aa, productive=True,
             cdr1_aa=p.cdr1_aa, cdr2_aa=p.cdr2_aa, cdr3_aa=p.cdr3_aa,
+            light_sequence_aa=p.light_sequence_aa, light_v_call=p.light_v_call,
+            light_j_call=p.light_j_call, light_cdr1_aa=p.light_cdr1_aa,
+            light_cdr2_aa=p.light_cdr2_aa, light_cdr3_aa=p.light_cdr3_aa,
             n_v_mutations=p.n_v_mutations,
             kd_molar=res.kd_molar, log10_kd=res.log10_kd,
             binder=res.log10_kd <= binder_threshold_log10_kd,

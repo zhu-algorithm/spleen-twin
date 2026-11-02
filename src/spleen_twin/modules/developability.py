@@ -211,7 +211,10 @@ class DevelopabilityPanel:
         instability = float(pa.instability_index())
         charge = float(pa.charge_at_pH(7.4))
 
-        cdr_concat = "".join(cdr_seqs.get(k, "") for k in ("cdr1", "cdr2", "cdr3"))
+        keys = (("h_cdr1", "h_cdr2", "h_cdr3", "l_cdr1", "l_cdr2", "l_cdr3")
+                if any(k.startswith("h_") for k in cdr_seqs)
+                else ("cdr1", "cdr2", "cdr3"))
+        cdr_concat = "".join(cdr_seqs.get(k, "") for k in keys)
         patch_raw = self._hydrophobic_patch(cdr_concat)
         # Deviation from the germline baseline, in units of its own spread.
         patch_z = (patch_raw - self._patch_ref) / self._patch_spread

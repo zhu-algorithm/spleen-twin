@@ -70,6 +70,14 @@ class AntibodyRecord:
     j_call: str
     junction_aa: str
     productive: bool
+    light_sequence: str = ""
+    light_sequence_aa: str = ""
+    light_v_call: str = ""
+    light_j_call: str = ""
+    light_junction_aa: str = ""
+    light_cdr1_aa: str = ""
+    light_cdr2_aa: str = ""
+    light_cdr3_aa: str = ""
     cdr1_aa: str = ""
     cdr2_aa: str = ""
     cdr3_aa: str = ""
@@ -95,7 +103,8 @@ class AntibodyRecord:
         sequence is the fallback identity; hashing an empty nucleotide
         field would collapse every design onto one checksum.
         """
-        basis = self.sequence or self.sequence_aa
+        basis = (self.sequence + "|" + self.light_sequence) if self.sequence else (
+            self.sequence_aa + "|" + self.light_sequence_aa)
         if not basis:
             basis = f"{self.v_call}|{self.cdr1_aa}|{self.cdr2_aa}|{self.cdr3_aa}"
         return hashlib.sha256(basis.encode()).hexdigest()[:16]
@@ -174,6 +183,8 @@ class Curator:
         """Write an AIRR-style rearrangement table."""
         cols = ["sequence_id", "sequence", "sequence_aa", "v_call", "d_call",
                 "j_call", "junction_aa", "productive", "cdr1_aa", "cdr2_aa",
+                "light_sequence", "light_sequence_aa", "light_v_call", "light_j_call",
+                "light_junction_aa", "light_cdr1_aa", "light_cdr2_aa", "light_cdr3_aa",
                 "cdr3_aa", "n_v_mutations", "kd_molar", "log10_kd", "binder",
                 "expression_g_l", "tm_celsius", "developability_tier",
                 "label_source", "curated_at"]

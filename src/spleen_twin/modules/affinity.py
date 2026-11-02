@@ -93,6 +93,9 @@ class AffinityResult:
     stability_penalty: float
     register: int
     epitope: str
+    source_type: str = "surrogate"
+    uncertainty_log10: Optional[float] = None
+    provenance: str = "spleen_twin.SurrogateAffinityOracle"
 
     @property
     def pkd(self) -> float:
@@ -109,6 +112,32 @@ class AffinityOracle(ABC):
 
     def kd(self, *args, **kwargs) -> float:
         return self.score(*args, **kwargs).kd_molar
+
+
+class CallbackAffinityOracle(AffinityOracle):
+    """Adapter for structural or experimental backends with typed provenance."""
+
+    def __init__(self, callback, source_type: str, provenance: str):
+        if source_type not in {"structural", "experimental"}:
+            raise ValueError("source_type must be structural or experimental")
+        self.callback, self.source_type, self.provenance = callback, source_type, provenance
+
+    def score(self, paratope: dict[str, str], epitope_seq: str,
+              framework_replacements: int = 0) -> AffinityResult:
+        try:
+            value = self.callback(paratope, epitope_seq)
+        except Exception as exc:
+            raise RuntimeError(f"{self.source_type} affinity backend failed") from exc
+        if isinstance(value, AffinityResult):
+            value.source_type, value.provenance = self.source_type, self.provenance
+            return value
+        kd, uncertainty = (value if isinstance(value, tuple) else (value, None))
+        if not np.isfinite(kd) or kd <= 0:
+            raise ValueError("affinity backend returned invalid KD")
+        logkd = float(math.log10(kd))
+        return AffinityResult(float(kd), logkd, RT_KCAL * math.log(10) * logkd,
+                              float("nan"), 0.0, 0, epitope_seq,
+                              self.source_type, uncertainty, self.provenance)
 
 
 class SurrogateAffinityOracle(AffinityOracle):
@@ -312,6 +341,7 @@ __all__ = [
     "AffinityOracle",
     "SurrogateAffinityOracle",
     "AffinityResult",
+    "CallbackAffinityOracle",
     "paratope_from",
     "RT_KCAL",
     "CHARGE",
