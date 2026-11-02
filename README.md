@@ -14,6 +14,22 @@ antibody output, and developability gating. Each module is driven by real
 germline sequence, published mutation models and published parameters
 rather than by invented constants.
 
+### Paired receptors and reproducible runs
+
+New simulations pair each productive IGH rearrangement with a productive IGK
+or IGL chain. Both chains contribute to the six-loop affinity paratope and the
+light chain remains attached through germinal-centre lineages. When a
+`ToleranceCheckpoint` enables editing, a self-reactive light chain is actually
+re-rearranged, re-screened, and recorded instead of being represented by a
+status flag alone. `spleen_twin.airr` provides a lossless paired AIRR-aligned
+round trip.
+
+`Spleen.run_manifest()` records the root seed, configuration, runtime versions
+and evidence-classified parameters. The executable M0/M1 distribution checks
+are available as `spleen_twin.validation.validate_vdj`; the scientific and
+software contract is documented in
+[`docs/m0-m1-contract.md`](docs/m0-m1-contract.md).
+
 ```
 antigen ─▶ APC / MHC-II ─▶ Tfh help ─┐
                                      ▼
@@ -193,7 +209,10 @@ running the script end to end regenerates it.
 
 ## Limitations
 
-- Heavy chain only by default. Light chains rearrange (`ChainRecombinator("IGK")`) but are not paired into the affinity model; receptor editing is therefore disabled by default.
+- Paired IGH+IGK/IGL receptors are enabled by default. Light-chain CDR1/CDR2
+  boundaries currently use an explicitly tagged inferred IMGT mapping because
+  the packaged gapped reference covers IGHV only. Receptor editing runs only
+  when a tolerance checkpoint is configured with `max_edits > 0`.
 - Affinity and developability are surrogates, as described above.
 - MHC-II presentation is a groove-fit heuristic that ranks peptides of one antigen against each other; it is not an epitope predictor.
 - A single germinal centre is drift-dominated for neutral markers such as isotype; use `n_germinal_centers > 1` for population-level isotype distributions.

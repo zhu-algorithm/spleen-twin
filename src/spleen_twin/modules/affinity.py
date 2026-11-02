@@ -139,7 +139,11 @@ class SurrogateAffinityOracle(AffinityOracle):
         steric_weight: float = 0.6,
         hbond_weight: float = 0.5,
     ) -> None:
-        self.cdr_weights = cdr_weights or {"cdr1": 0.6, "cdr2": 0.7, "cdr3": 1.8}
+        self.cdr_weights = cdr_weights or {
+            "cdr1": 0.6, "cdr2": 0.7, "cdr3": 1.8,
+            "h_cdr1": 0.6, "h_cdr2": 0.7, "h_cdr3": 1.8,
+            "l_cdr1": 0.45, "l_cdr2": 0.5, "l_cdr3": 1.0,
+        }
         self.ceiling = ceiling_log10_kd
         self.floor = floor_log10_kd
         self.stability_cost = stability_cost_per_fr_mutation
@@ -214,8 +218,7 @@ class SurrogateAffinityOracle(AffinityOracle):
 
     # -- public API ---------------------------------------------------------
     def raw_score(self, paratope: dict[str, str], epitope_seq: str) -> tuple[float, int]:
-        key = (paratope.get("cdr1", ""), paratope.get("cdr2", ""),
-               paratope.get("cdr3", ""), epitope_seq)
+        key = tuple((loop, paratope.get(loop, "")) for loop in self.cdr_weights) + (epitope_seq,)
         hit = self._score_cache.get(key)
         if hit is not None:
             return hit

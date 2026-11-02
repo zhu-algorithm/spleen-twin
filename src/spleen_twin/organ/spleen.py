@@ -39,6 +39,8 @@ from ..modules.shm import HypermutationEngine
 from ..modules.tcell import TCellCompartment
 from ..modules.tolerance import ToleranceCheckpoint, ToleranceOutcome, pre_bcr_checkpoint
 from ..modules.vdj import ChainRecombinator
+from ..modules.receptor import EditingEvent
+from ..provenance import EvidenceClass, ParameterRecord, RunManifest
 
 
 @dataclass
@@ -82,11 +84,19 @@ class Spleen:
         heavy_locus: str = "IGH",
         n_germinal_centers: int = 1,
         gc_kwargs: Optional[dict] = None,
+        pair_light_chains: bool = True,
+        light_locus_probability_kappa: float = 0.60,
+        max_light_edit_attempts: int = 3,
     ) -> None:
         self.rng = np.random.default_rng(seed)
         self.seed_value = seed
 
         self.recombinator = ChainRecombinator(heavy_locus, rng=self.rng)
+        self.pair_light_chains = pair_light_chains
+        self.light_kappa = ChainRecombinator("IGK", rng=self.rng) if pair_light_chains else None
+        self.light_lambda = ChainRecombinator("IGL", rng=self.rng) if pair_light_chains else None
+        self.light_locus_probability_kappa = light_locus_probability_kappa
+        self.max_light_edit_attempts = max_light_edit_attempts
         self.annotator = ImgtAnnotator()
         self.shm = HypermutationEngine(rng=self.rng)
         self.apc = AntigenPresentingCompartment(rng=self.rng)
@@ -102,6 +112,43 @@ class Spleen:
         self.naive_pool: list[BCell] = []
         self.repertoire_stats: Optional[RepertoireStats] = None
         self._calibrated = False
+
+    def run_manifest(self) -> RunManifest:
+        """Return the minimum provenance needed to replay this organ setup."""
+        return RunManifest(
+            seed=self.seed_value,
+            config={
+                "n_germinal_centers": self.n_gcs,
+                "pair_light_chains": self.pair_light_chains,
+                "light_locus_probability_kappa": self.light_locus_probability_kappa,
+                "max_light_edit_attempts": self.max_light_edit_attempts,
+                "gc_kwargs": self.gc_kwargs,
+            },
+            parameters=[
+                ParameterRecord("light_locus_probability_kappa", self.light_locus_probability_kappa,
+                                "probability", EvidenceClass.MODEL_KNOB,
+                                "configurable approximation; validate per population", "Spleen"),
+                ParameterRecord("max_light_edit_attempts", self.max_light_edit_attempts, "attempts",
+                                EvidenceClass.MODEL_KNOB, "explicit rescue limit", "Spleen"),
+            ],
+            inputs={},
+        )
+
+    def _productive_light(self, reason: str = "initial"):
+        locus = "IGK" if self.rng.random() < self.light_locus_probability_kappa else "IGL"
+        recombinator = self.light_kappa if locus == "IGK" else self.light_lambda
+        r = recombinator.rearrange_productive()
+        return r, EditingEvent(0, locus, r.v_gene, r.j_gene, reason, r.productive)
+
+    def _attach_light(self, cell: BCell, light, history: list[EditingEvent]) -> None:
+        lm = self.annotator.annotate(light)
+        if not lm.annotated:
+            raise RuntimeError(f"productive {light.locus} chain could not be annotated")
+        cell.light_rearrangement = light
+        cell.light_seq_nt = light.seq_nt
+        cell.light_regions = lm.labels
+        cell.light_cdr_index = GerminalCenter.cdr_index_from_regions(lm.labels)
+        cell.editing_history = list(history)
 
     # -- 1. repertoire ------------------------------------------------------
     def generate_naive_repertoire(
@@ -134,14 +181,38 @@ class Spleen:
                 rearrangement=r, seq_nt=r.seq_nt, regions=rm.labels,
                 cdr_index=GerminalCenter.cdr_index_from_regions(rm.labels),
             )
+            if self.pair_light_chains:
+                light, event = self._productive_light()
+                self._attach_light(cell, light, [event])
             if tolerance is not None:
-                res = tolerance.screen(cell.paratope())
+                res = tolerance.screen(cell.paratope(), edits_used=0)
                 if res.outcome is ToleranceOutcome.DELETED:
                     deleted += 1
                     continue
                 if res.outcome is ToleranceOutcome.EDITED:
-                    edited += 1
-                    continue
+                    rescued = False
+                    terminal_anergy = False
+                    for attempt in range(1, self.max_light_edit_attempts + 1):
+                        light, event = self._productive_light(reason="self_reactivity")
+                        event = EditingEvent(attempt, event.locus, event.v_gene, event.j_gene,
+                                             event.reason, event.productive)
+                        self._attach_light(cell, light, cell.editing_history + [event])
+                        retry = tolerance.screen(cell.paratope(), edits_used=attempt)
+                        if retry.outcome is ToleranceOutcome.NAIVE:
+                            edited += 1
+                            rescued = True
+                            break
+                        if retry.outcome is ToleranceOutcome.ANERGIC:
+                            anergic += 1
+                            terminal_anergy = True
+                            break
+                        if retry.outcome is ToleranceOutcome.DELETED:
+                            break
+                    if terminal_anergy:
+                        continue
+                    if not rescued:
+                        deleted += 1
+                        continue
                 if res.outcome is ToleranceOutcome.ANERGIC:
                     anergic += 1
                     continue
@@ -216,7 +287,10 @@ class Spleen:
             gc.seed([
                 BCell(cell_id=c.cell_id, clone_id=c.clone_id, parent_id=None,
                       rearrangement=c.rearrangement, seq_nt=c.seq_nt,
-                      regions=c.regions, cdr_index=c.cdr_index)
+                      regions=c.regions, cdr_index=c.cdr_index,
+                      light_rearrangement=c.light_rearrangement,
+                      light_seq_nt=c.light_seq_nt, light_regions=c.light_regions,
+                      light_cdr_index=c.light_cdr_index, editing_history=c.editing_history)
                 for c in subset
             ])
             gc.run(n_rounds, tfh_total_help=min(1.0, tfh.quality + 0.3))
