@@ -10,6 +10,10 @@ __version__ = "0.1.0"
 
 from .organ import Spleen, CampaignResult, RepertoireStats
 from .modules import affinity, antigen, developability, germinal_center, shm, vdj
+from .modules.receptor import PairedReceptor, EditingEvent
+from .provenance import EvidenceClass, ParameterRecord, RunManifest
 
 __all__ = ["Spleen", "CampaignResult", "RepertoireStats", "__version__",
-           "affinity", "antigen", "developability", "germinal_center", "shm", "vdj"]
+           "affinity", "antigen", "developability", "germinal_center", "shm", "vdj",
+           "PairedReceptor", "EditingEvent", "EvidenceClass", "ParameterRecord",
+           "RunManifest"]

@@ -71,12 +71,32 @@ class BCell:
     #: Amino-acid indices of each CDR loop, computed once per founder clone
     #: and inherited by reference through the lineage.
     cdr_index: dict = field(default_factory=dict)
+    light_rearrangement: Optional[Rearrangement] = None
+    light_seq_nt: str = ""
+    light_regions: list[str] = field(default_factory=list)
+    light_cdr_index: dict = field(default_factory=dict)
+    editing_history: list = field(default_factory=list)
 
     def paratope(self) -> dict:
         aa = self.seq_aa
-        return {
+        heavy = {
             loop: "".join(aa[i] for i in idx if i < len(aa))
             for loop, idx in self.cdr_index.items()
+        }
+        if not self.light_rearrangement:
+            return heavy
+        laa = translate(self.light_seq_nt or self.light_rearrangement.seq_nt)
+        light = {
+            loop: "".join(laa[i] for i in idx if i < len(laa))
+            for loop, idx in self.light_cdr_index.items()
+        }
+        return {
+            "h_cdr1": heavy.get("cdr1", ""),
+            "h_cdr2": heavy.get("cdr2", ""),
+            "h_cdr3": heavy.get("cdr3", ""),
+            "l_cdr1": light.get("cdr1", ""),
+            "l_cdr2": light.get("cdr2", ""),
+            "l_cdr3": light.get("cdr3", ""),
         }
 
     @property
@@ -266,6 +286,11 @@ class GerminalCenter:
                     birth_round=self.round_index,
                     mutations=cell.mutations + muts,
                     cdr_index=cell.cdr_index,
+                    light_rearrangement=cell.light_rearrangement,
+                    light_seq_nt=cell.light_seq_nt,
+                    light_regions=cell.light_regions,
+                    light_cdr_index=cell.light_cdr_index,
+                    editing_history=cell.editing_history,
                 )
                 if "*" in child.seq_aa:
                     n_stop += 1

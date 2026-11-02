@@ -6,6 +6,7 @@ complete human spleen atlas currently assembled from public data.
 """
 import json
 import time
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -117,7 +118,20 @@ with cellxgene_census.open_soma(census_version=CENSUS_VERSION,
 
     blocks = int(np.ceil(len(joinids) / BLOCK))
     failed = []
+    checkpoint_path = Path("data/spleen_expression_checkpoint.npz")
+    completed = set()
+    if checkpoint_path.exists():
+        cp = np.load(checkpoint_path, allow_pickle=False)
+        if tuple(cp["shape"]) != sum_expr.shape:
+            raise RuntimeError("expression checkpoint shape does not match current Census slice")
+        sum_expr[:] = cp["sum_expr"]
+        pos_expr[:] = cp["pos_expr"]
+        n_cells_ct[:] = cp["n_cells_ct"]
+        completed = set(int(x) for x in cp["completed"])
+        print(f"  resumed {len(completed)}/{blocks} completed blocks", flush=True)
     for b in range(blocks):
+        if b in completed:
+            continue
         chunk = joinids[b * BLOCK:(b + 1) * BLOCK]
         try:
             ad = cellxgene_census.get_anndata(
@@ -140,6 +154,13 @@ with cellxgene_census.open_soma(census_version=CENSUS_VERSION,
                 sum_expr[c] += dense[sel].sum(axis=0)
                 pos_expr[c] += (dense[sel] > 0).sum(axis=0)
                 n_cells_ct[c] += sel.sum()
+            completed.add(b)
+            temporary = checkpoint_path.with_suffix(".tmp.npz")
+            np.savez_compressed(temporary, sum_expr=sum_expr, pos_expr=pos_expr,
+                                n_cells_ct=n_cells_ct,
+                                completed=np.array(sorted(completed), dtype=int),
+                                shape=np.array(sum_expr.shape, dtype=int))
+            temporary.replace(checkpoint_path)
             print(f"  [{time.time()-t0:.0f}s] block {b+1}/{blocks} ({len(chunk):,} cells)", flush=True)
         except Exception as exc:  # noqa: BLE001
             failed.append({"block": b, "error": repr(exc)[:300]})
@@ -157,5 +178,7 @@ prov.update(blocks=blocks, blocks_failed=len(failed), failed=failed,
             wall_seconds=round(time.time() - t0, 1),
             normalization="CP10K then log1p; mean over all cells of the cell type (zeros included)")
 json.dump(prov, open("data/spleen_census_provenance.json", "w"), indent=1)
+if failed:
+    raise RuntimeError(f"{len(failed)} expression blocks failed; rerun to resume")
 print(f"\nDONE in {time.time()-t0:.0f}s — {prov['n_cells_total']:,} cells, "
       f"{prov['n_cell_types']} cell types, {prov['n_datasets']} datasets, blocks_failed={len(failed)}")

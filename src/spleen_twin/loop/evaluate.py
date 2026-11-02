@@ -36,6 +36,8 @@ class RoundEvaluation:
     prediction_spearman: Optional[float] = None
     n_failures_logged: int = 0
     notes: str = ""
+    preregistered_hit_threshold_log10_kd: float = -8.5
+    matched_budget: bool = False
 
 
 def evaluate_round(round_index: int, measured, parent_best_log10_kd: float,
@@ -63,6 +65,7 @@ def evaluate_round(round_index: int, measured, parent_best_log10_kd: float,
         rho = float(spearmanr(p, a).statistic)
 
     wins = bool(bm < bb)
+    matched = len(model) == len(base) and len(model) > 0
     return RoundEvaluation(
         round_index=round_index, n_model=len(model), n_baseline=len(base),
         best_model_log10_kd=bm, best_baseline_log10_kd=bb,
@@ -72,6 +75,8 @@ def evaluate_round(round_index: int, measured, parent_best_log10_kd: float,
         hit_rate_model=hm, hit_rate_baseline=hb,
         prediction_spearman=rho,
         notes="" if wins else "model arm did not beat the random baseline this round",
+        preregistered_hit_threshold_log10_kd=hit_threshold_log10_kd,
+        matched_budget=matched,
     )
 
 

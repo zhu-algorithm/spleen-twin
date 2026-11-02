@@ -138,6 +138,28 @@ class ImgtAnnotator:
         cdr3_len = len(rearrangement.cdr3_nt)
         fr4_len = rearrangement.fr4_nt
 
+        if rearrangement.locus in {"IGK", "IGL"}:
+            # OLGA does not ship an IMGT-gapped light-chain reference.  Light
+            # V domains nevertheless use the same IMGT region widths.  Anchor
+            # the conserved-Cys end and assign the canonical CDR1/FR2/CDR2/FR3
+            # widths; the remaining N-terminal codons are FR1.  The donor tag
+            # makes this inferred mapping distinguishable from IGHV alignment.
+            aa_len, rem = divmod(v_len, 3)
+            widths = (("fwr3", 39), ("cdr2", 10), ("fwr2", 17), ("cdr1", 12))
+            aa_labels = ["fwr1"] * aa_len
+            cursor = aa_len
+            for region, width in widths:
+                start = max(0, cursor - width)
+                aa_labels[start:cursor] = [region] * (cursor - start)
+                cursor = start
+            labels = [lab for lab in aa_labels for _ in range(3)] + ["fwr1"] * rem
+            return RegionMap(
+                labels=labels + ["cdr3"] * cdr3_len + ["fwr4"] * fr4_len,
+                v_allele=rearrangement.v_gene,
+                donor_allele="inferred-IMGT-light-boundaries",
+                annotated=True,
+            )
+
         donor, labels = self._v_labels(rearrangement.v_gene, v_len)
         if labels is None:
             return RegionMap(

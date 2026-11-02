@@ -58,7 +58,9 @@ def records_from_campaign(
         for i, c in enumerate(cells):
             cdrs = c.paratope()
             kd = 10.0 ** c.log10_kd
-            rep = panel.evaluate(c.seq_aa, cdrs, kd)
+            light = c.light_rearrangement
+            paired_aa = c.seq_aa + (light.seq_aa if light else "")
+            rep = panel.evaluate(paired_aa, cdrs, kd)
             records.append(AntibodyRecord(
                 sequence_id=f"{campaign_id}-{tag}-{i:05d}",
                 sequence=c.seq_nt,
@@ -68,9 +70,17 @@ def records_from_campaign(
                 j_call=c.rearrangement.j_gene,
                 junction_aa=c.rearrangement.cdr3_aa,
                 productive=True,
-                cdr1_aa=cdrs.get("cdr1", ""),
-                cdr2_aa=cdrs.get("cdr2", ""),
-                cdr3_aa=cdrs.get("cdr3", ""),
+                light_sequence=light.seq_nt if light else "",
+                light_sequence_aa=light.seq_aa if light else "",
+                light_v_call=light.v_gene if light else "",
+                light_j_call=light.j_gene if light else "",
+                light_junction_aa=light.cdr3_aa if light else "",
+                light_cdr1_aa=cdrs.get("l_cdr1", ""),
+                light_cdr2_aa=cdrs.get("l_cdr2", ""),
+                light_cdr3_aa=cdrs.get("l_cdr3", ""),
+                cdr1_aa=cdrs.get("h_cdr1", cdrs.get("cdr1", "")),
+                cdr2_aa=cdrs.get("h_cdr2", cdrs.get("cdr2", "")),
+                cdr3_aa=cdrs.get("h_cdr3", cdrs.get("cdr3", "")),
                 n_v_mutations=c.n_mutations,
                 kd_molar=kd,
                 log10_kd=c.log10_kd,

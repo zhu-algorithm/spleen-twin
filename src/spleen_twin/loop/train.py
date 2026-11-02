@@ -27,7 +27,9 @@ def build_feature_spec(records, k: int = 2, max_cdr3: int = 30) -> dict:
     """Fix the feature vocabulary on the training set, once."""
     kmers: dict[str, int] = {}
     for r in records:
-        s = r.cdr1_aa + r.cdr2_aa + r.cdr3_aa
+        s = (r.cdr1_aa + r.cdr2_aa + r.cdr3_aa +
+             getattr(r, "light_cdr1_aa", "") + getattr(r, "light_cdr2_aa", "") +
+             getattr(r, "light_cdr3_aa", ""))
         for i in range(len(s) - k + 1):
             kmers.setdefault(s[i:i + k], len(kmers))
     return {"kmers": kmers, "k": k, "max_cdr3": max_cdr3}
@@ -42,7 +44,9 @@ def featurise(records, spec: dict) -> np.ndarray:
     X = np.zeros((len(records), n_comp + n_kmer + n_pos + 2), dtype=np.float32)
 
     for row, r in enumerate(records):
-        s = r.cdr1_aa + r.cdr2_aa + r.cdr3_aa
+        s = (r.cdr1_aa + r.cdr2_aa + r.cdr3_aa +
+             getattr(r, "light_cdr1_aa", "") + getattr(r, "light_cdr2_aa", "") +
+             getattr(r, "light_cdr3_aa", ""))
         for a in s:
             if a in aa_index:
                 X[row, aa_index[a]] += 1.0
@@ -78,6 +82,14 @@ def lineage_split(records, test_fraction: float = 0.25, seed: int = 0):
     return train_idx, test_idx, len(uniq)
 
 
+def assert_no_lineage_leakage(records, train_idx, test_idx) -> None:
+    train = {lineage_key(records[i]) for i in train_idx}
+    test = {lineage_key(records[i]) for i in test_idx}
+    overlap = train & test
+    if overlap:
+        raise ValueError(f"lineage leakage detected: {sorted(overlap)[:3]}")
+
+
 @dataclass
 class TrainedModel:
     kind: str
@@ -103,6 +115,7 @@ def train_affinity_model(records, alpha: float = 1.0, test_fraction: float = 0.2
         raise ValueError(f"only {len(usable)} labelled records; need at least 20")
 
     tr, te, n_lineages = lineage_split(usable, test_fraction, seed)
+    assert_no_lineage_leakage(usable, tr, te)
     spec = build_feature_spec([usable[i] for i in tr])
     X = featurise(usable, spec)
     y = np.array([r.log10_kd for r in usable], dtype=float)
@@ -128,4 +141,5 @@ def train_affinity_model(records, alpha: float = 1.0, test_fraction: float = 0.2
 
 
 __all__ = ["train_affinity_model", "TrainedModel", "featurise",
-           "build_feature_spec", "lineage_split", "lineage_key", "AMINO_ACIDS"]
+           "build_feature_spec", "lineage_split", "lineage_key",
+           "assert_no_lineage_leakage", "AMINO_ACIDS"]
