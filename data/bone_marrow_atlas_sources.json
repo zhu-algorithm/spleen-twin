@@ -1,0 +1,22 @@
+{
+  "core": {
+    "name": "10x 20k human bone marrow mononuclear cells, 5' HT v2",
+    "organism": "Homo sapiens",
+    "tissue": "bone marrow",
+    "health_status": "healthy",
+    "modalities": ["gene expression", "cell-surface protein", "BCR VDJ", "TCR VDJ"],
+    "cell_ranger_version": "6.1.0",
+    "license": "CC BY 4.0",
+    "source": "https://www.10xgenomics.com/datasets/20-k-bone-marrow-mononuclear-cells-bmmn-cs-5-ht-v-2-0-2-high-6-1-0",
+    "local_path": "data/external/bone_marrow/10x_20k_bmmnc_5p_ht_v2",
+    "selection_reason": "Matched expression and BCR contigs share cell barcodes and include IGH, IGK and IGL, enabling heavy-light pairing and V(D)J-linked cell-state analysis."
+  },
+  "expansion_candidates": [
+    {"accession": "GSE328023/GSM9670466", "scope": "human bone-marrow B cells; CITE-seq plus BCR VDJ"},
+    {"accession": "GSE181543/GSM5505349", "scope": "healthy bone-marrow B-cell enriched; 5' GEX, ADT and VDJ"},
+    {"accession": "GSE159929/GSM4909969", "scope": "adult marrow BCR with full-length BCR and gene expression"},
+    {"accession": "GSE230690/GSE230705", "scope": "healthy bone-marrow plasma-cell maturation and survival with scVDJ"},
+    {"accession": "GSE253857", "scope": "plasma and memory B cells from eight human bone-marrow samples"},
+    {"accession": "GSE293872/PRJNA1246633", "scope": "bone-marrow B-lineage GEX plus VDJ across healthy and disease samples"}
+  ]
+}

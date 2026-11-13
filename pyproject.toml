@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spleen-twin"
-version = "0.1.0"
+version = "0.2.0"
 description = "A digital-twin spleen for antibody generation, affinity maturation and closed-loop design"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -30,12 +30,13 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=7", "matplotlib>=3.7", "pandas>=2.0"]
 atlas = ["cellxgene-census", "pandas>=2.0", "pyarrow"]
+ai = ["torch>=2.3,<3", "transformers>=4.45,<5", "safetensors>=0.4", "h5py>=3.10"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-spleen_twin = ["data/*.csv", "data/*.fasta"]
+spleen_twin = ["data/*.csv", "data/*.fasta", "data/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

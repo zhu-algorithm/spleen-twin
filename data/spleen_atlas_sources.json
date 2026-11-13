@@ -1,0 +1,85 @@
+{
+  "schema_version": "spleen-atlas-sources-1",
+  "created_at": "2026-11-03",
+  "scope": "human spleen single-cell and spatial multi-omics",
+  "sources": [
+    {
+      "id": "cellxgene-census-2025-11-08-human-spleen",
+      "provider": "CZ CELLxGENE Census",
+      "modality": ["scRNA-seq", "snRNA-seq"],
+      "cells": 577677,
+      "donors": 58,
+      "cell_types": 110,
+      "local_artifacts": ["spleen_obs.parquet", "spleen_expression_checkpoint.npz"],
+      "status": "downloaded-verified",
+      "expression_summary_shape": [110, 77],
+      "expression_completed_blocks": 58,
+      "expression_failed_blocks": 0,
+      "url": "https://cellxgene-census.readthedocs.io/",
+      "deduplication_key": "dataset_id+soma_joinid"
+    },
+    {
+      "id": "hubmap-spleen-rnaseq-2025-05-19",
+      "provider": "NIH HuBMAP",
+      "modality": ["scRNA-seq", "snRNA-seq"],
+      "cells": 108929,
+      "datasets": 16,
+      "download_bytes": 604104241,
+      "file": "external/hubmap/hubmap_spleen_rnaseq_raw_2025-05-19.h5ad",
+      "status": "downloaded-verified",
+      "observed_shape": [108929, 60286],
+      "observed_dataset_ids": 11,
+      "matrix_storage": "CSR float32",
+      "sha256": "e259cd09d567c9f9de363f6b16243563b03897ef15d9b83e96a19a70a8c78b7a",
+      "url": "https://hubmap-data-products.s3.amazonaws.com/6135c7c8-b2f9-4eb2-bf0c-859fd0afdc6f/SP_raw.h5ad",
+      "deduplication_key": "hubmap_id+cell_id"
+    },
+    {
+      "id": "hubmap-spleen-codex-2024-11-07",
+      "provider": "NIH HuBMAP",
+      "modality": ["CODEX", "spatial-proteomics"],
+      "cells": 3939679,
+      "datasets": 65,
+      "download_bytes": 2860093794,
+      "file": "external/hubmap/hubmap_spleen_codex_raw_2024-11-07.h5ad",
+      "status": "downloaded-verified",
+      "observed_shape": [3939679, 34],
+      "observed_dataset_ids": 29,
+      "matrix_storage": "dense float64",
+      "spatial_coordinates": "obsm/centers (3939679 x 2)",
+      "markers": ["CD107a", "CD11c", "CD15", "CD163", "CD1c", "CD20", "CD21", "CD271", "CD31", "CD34", "CD35", "CD3e", "CD4", "CD44", "CD45", "CD45RA", "CD45RO", "CD5", "CD68", "CD69", "CD8", "CXCR5", "Collagen IV", "DAPI-02", "Foxp3", "HLA-DR", "IgM", "Ki67", "Lyve1", "PanCK", "Podoplanin", "Vimentin", "a-SMA", "eCAD"],
+      "sha256": "e36decbb9d8492b4a6d6fafa3f93909d6b2844544f8abd1c01dfd3581305f13f",
+      "url": "https://hubmap-data-products.s3.amazonaws.com/f74d01ae-5e1e-482a-9a2c-c4480c43b1b2/SP_raw.h5ad",
+      "deduplication_key": "hubmap_id+cell_id+spatial_coordinates"
+    },
+    {
+      "id": "tissue-stability-spleen-prjeb31843",
+      "provider": "Human Cell Atlas / ENA",
+      "modality": ["scRNA-seq"],
+      "cells": 94257,
+      "donors": 5,
+      "status": "catalogued-possible-cellxgene-overlap",
+      "url": "https://www.tissuestabilitycellatlas.org/",
+      "deduplication_key": "study_accession+donor+cell_barcode"
+    },
+    {
+      "id": "geo-gse299043-multimodal-immune-aging",
+      "provider": "NCBI GEO",
+      "modality": ["snRNA-seq", "CITE-seq"],
+      "tissue_note": "pooled spleen and thoracic lymph node samples require tissue-level filtering",
+      "status": "pilot-inspected-not-spleen-separable",
+      "pilot_file": "external/geo/GSE299043_637C_001.CZI-IA10466285.v1.h5ad",
+      "pilot_shape": [481, 36740],
+      "exclusion_reason": "The public per-library H5AD has no cell-level obs metadata, while GEO sample metadata labels tissues as pooled across spleen and several other organs. It cannot be admitted to a spleen-only atlas without an external barcode-to-tissue map.",
+      "url": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE299043",
+      "deduplication_key": "geo_sample+cell_barcode"
+    }
+  ],
+  "integration_rules": [
+    "Keep raw counts and normalized layers separate.",
+    "Never sum source cell counts before dataset- and donor-level overlap checks.",
+    "Map cell ontology terms, genes, proteins and spatial regions through explicit crosswalk tables.",
+    "Preserve donor, disease, assay, tissue label, source dataset and license provenance.",
+    "Use donor-aware splits for model calibration and leave-one-study-out evaluation."
+  ]
+}

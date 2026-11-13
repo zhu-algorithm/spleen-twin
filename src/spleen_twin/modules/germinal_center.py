@@ -65,6 +65,7 @@ class BCell:
     generation: int = 0
     birth_round: int = 0
     mutations: list[Mutation] = field(default_factory=list)
+    light_mutations: list[Mutation] = field(default_factory=list)
     log10_kd: float = 0.0
     help_received: float = 0.0
     zone: Zone = Zone.DARK
@@ -105,23 +106,25 @@ class BCell:
 
     @property
     def n_mutations(self) -> int:
-        return len(self.mutations)
+        return len(self.mutations) + len(self.light_mutations)
 
     @property
     def n_replacement(self) -> int:
-        return sum(1 for m in self.mutations if m.replacement)
+        return sum(1 for m in self.mutations + self.light_mutations if m.replacement)
 
     @property
     def n_silent(self) -> int:
-        return sum(1 for m in self.mutations if m.silent)
+        return sum(1 for m in self.mutations + self.light_mutations if m.silent)
 
     @property
     def n_fr_replacement(self) -> int:
-        return sum(1 for m in self.mutations if m.replacement and m.region.startswith("fwr"))
+        return sum(1 for m in self.mutations + self.light_mutations
+                   if m.replacement and m.region.startswith("fwr"))
 
     @property
     def n_cdr_replacement(self) -> int:
-        return sum(1 for m in self.mutations if m.replacement and m.region.startswith("cdr"))
+        return sum(1 for m in self.mutations + self.light_mutations
+                   if m.replacement and m.region.startswith("cdr"))
 
 
 @dataclass
@@ -274,6 +277,11 @@ class GerminalCenter:
             n_children = int(self.rng.poisson(expected)) if expected < 1.0 else int(round(expected))
             for _ in range(n_children):
                 new_nt, muts = self.shm.mutate(cell.seq_nt, cell.regions, divisions=n_div)
+                new_light_nt, light_muts = cell.light_seq_nt, []
+                if cell.light_rearrangement and cell.light_seq_nt:
+                    new_light_nt, light_muts = self.shm.mutate(
+                        cell.light_seq_nt, cell.light_regions, divisions=n_div
+                    )
                 child = BCell(
                     cell_id=self._new_id(),
                     clone_id=cell.clone_id,
@@ -285,14 +293,17 @@ class GerminalCenter:
                     generation=cell.generation + n_div,
                     birth_round=self.round_index,
                     mutations=cell.mutations + muts,
+                    light_mutations=cell.light_mutations + light_muts,
                     cdr_index=cell.cdr_index,
                     light_rearrangement=cell.light_rearrangement,
-                    light_seq_nt=cell.light_seq_nt,
+                    light_seq_nt=new_light_nt,
                     light_regions=cell.light_regions,
                     light_cdr_index=cell.light_cdr_index,
                     editing_history=cell.editing_history,
                 )
-                if "*" in child.seq_aa:
+                if "*" in child.seq_aa or (
+                    child.light_rearrangement and "*" in translate(child.light_seq_nt)
+                ):
                     n_stop += 1
                     continue
                 if self.csr is not None:

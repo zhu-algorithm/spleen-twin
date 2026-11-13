@@ -35,7 +35,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field, asdict
-from typing import Optional
+from typing import Mapping, Optional
 
 import numpy as np
 
@@ -203,7 +203,23 @@ class ChainRecombinator:
             seq += num2nt[int(C_R[nt2num[seq[-1]], :].searchsorted(self.rng.random()))]
         return seq
 
-    def _draw_events(self) -> dict:
+    def _weighted_draw(self, cumulative, names: list[str],
+                       segment_weights: Optional[Mapping[str, float]]) -> int:
+        """Draw from an OLGA CDF after applying optional regulatory priors."""
+        if not segment_weights:
+            return int(cumulative.searchsorted(self.rng.random()))
+        cdf = np.asarray(cumulative, dtype=float)
+        probs = np.diff(np.concatenate(([0.0], cdf)))
+        weights = np.asarray([
+            max(0.0, float(segment_weights.get(name, 1.0))) for name in names
+        ])
+        adjusted = probs * weights
+        if adjusted.sum() <= 0:
+            adjusted = probs
+        adjusted = adjusted / adjusted.sum()
+        return int(self.rng.choice(len(adjusted), p=adjusted))
+
+    def _draw_events(self, segment_weights: Optional[Mapping[str, float]] = None) -> dict:
         """Draw recombination events using this object's RNG.
 
         Mirrors ``olga.sequence_generation.SequenceGeneration*.choose_random_recomb_events``
@@ -213,13 +229,29 @@ class ChainRecombinator:
         ev: dict = {}
         if self.has_d:
             # Heavy chain: V is marginal, (D, J) jointly distributed.
-            ev["V"] = int(sg.CPV.searchsorted(self.rng.random()))
-            dj = int(sg.CPDJ.searchsorted(self.rng.random()))
+            ev["V"] = self._weighted_draw(sg.CPV, self.v_genes, segment_weights)
+            dj_names = [f"{d}|{j}" for d in self.d_genes for j in self.j_genes]
+            dj_weights = None
+            if segment_weights:
+                dj_weights = {
+                    name: (float(segment_weights.get(name.split("|", 1)[0], 1.0))
+                           * float(segment_weights.get(name.split("|", 1)[1], 1.0)))
+                    for name in dj_names
+                }
+            dj = self._weighted_draw(sg.CPDJ, dj_names, dj_weights)
             ev["D"] = dj // sg.num_J_genes
             ev["J"] = dj % sg.num_J_genes
         else:
             # Light chain: (V, J) jointly distributed, no D segment.
-            vj = int(sg.CPVJ.searchsorted(self.rng.random()))
+            vj_names = [f"{v}|{j}" for v in self.v_genes for j in self.j_genes]
+            vj_weights = None
+            if segment_weights:
+                vj_weights = {
+                    name: (float(segment_weights.get(name.split("|", 1)[0], 1.0))
+                           * float(segment_weights.get(name.split("|", 1)[1], 1.0)))
+                    for name in vj_names
+                }
+            vj = self._weighted_draw(sg.CPVJ, vj_names, vj_weights)
             ev["V"] = vj // sg.num_J_genes
             ev["J"] = vj % sg.num_J_genes
         ev["delV"] = int(sg.given_V_CPdelV[ev["V"], :].searchsorted(self.rng.random()))
@@ -234,7 +266,8 @@ class ChainRecombinator:
             ev["insVJ"] = int(sg.CPinsVJ.searchsorted(self.rng.random()))
         return ev
 
-    def rearrange(self, max_tries: int = 200) -> Optional[Rearrangement]:
+    def rearrange(self, max_tries: int = 200,
+                  segment_weights: Optional[Mapping[str, float]] = None) -> Optional[Rearrangement]:
         """Attempt one rearrangement.
 
         Returns the rearrangement whether or not it is productive, or ``None``
@@ -242,7 +275,7 @@ class ChainRecombinator:
         impossible join, which the cell would simply not survive).
         """
         for _ in range(max_tries):
-            ev = self._draw_events()
+            ev = self._draw_events(segment_weights=segment_weights)
             v_seg = self.genomic.cutV_genomic_CDR3_segs[ev["V"]]
             j_seg = self.genomic.cutJ_genomic_CDR3_segs[ev["J"]]
             if len(v_seg) <= ev["delV"] or len(j_seg) <= ev["delJ"]:
@@ -306,14 +339,15 @@ class ChainRecombinator:
             )
         return None
 
-    def rearrange_productive(self, max_attempts: int = 1000) -> Rearrangement:
+    def rearrange_productive(self, max_attempts: int = 1000,
+                             segment_weights: Optional[Mapping[str, float]] = None) -> Rearrangement:
         """Keep rearranging until a productive chain appears.
 
         Models the two chromosomal attempts plus receptor editing collapsed
         into a single "cell eventually succeeds or dies" outcome.
         """
         for _ in range(max_attempts):
-            r = self.rearrange()
+            r = self.rearrange(segment_weights=segment_weights)
             if r is not None and r.productive:
                 return r
         raise RuntimeError(f"no productive {self.locus} rearrangement in {max_attempts} attempts")

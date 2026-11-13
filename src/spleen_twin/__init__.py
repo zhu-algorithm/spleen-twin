@@ -6,14 +6,16 @@ germinal-centre affinity maturation, class switching, antibody output and
 developability gating — and wraps them in a wet-dry closed loop.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
-from .organ import Spleen, CampaignResult, RepertoireStats
-from .modules import affinity, antigen, developability, germinal_center, shm, vdj
+from .organ import Spleen, CampaignResult, RepertoireStats, BCellStage, BoneMarrowTrajectory
+from .modules import (affinity, ai_maturation, alphagenome_vdj, antigen,
+                      developability, germinal_center, shm, vdj)
 from .modules.receptor import PairedReceptor, EditingEvent
 from .provenance import EvidenceClass, ParameterRecord, RunManifest
 
 __all__ = ["Spleen", "CampaignResult", "RepertoireStats", "__version__",
-           "affinity", "antigen", "developability", "germinal_center", "shm", "vdj",
+           "BCellStage", "BoneMarrowTrajectory", "affinity", "ai_maturation",
+           "alphagenome_vdj", "antigen", "developability", "germinal_center", "shm", "vdj",
            "PairedReceptor", "EditingEvent", "EvidenceClass", "ParameterRecord",
            "RunManifest"]
