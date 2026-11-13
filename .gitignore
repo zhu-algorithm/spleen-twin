@@ -4,8 +4,14 @@ __pycache__/
 build/
 dist/
 .venv/
+.venv-geneformer/
 .pytest_cache/
 results/
 logs/
 *.parquet
 .DS_Store
+
+# Downloaded atlas matrices and resumable extraction state are local data,
+# not source artifacts.  Keep manifests, provenance and compact summaries in Git.
+data/external/
+data/spleen_expression_checkpoint.npz

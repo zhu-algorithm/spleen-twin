@@ -1,0 +1,45 @@
+{
+  "schema_version": "alphagenome2-vdj-integration-1",
+  "model": "AlphaGenome 2",
+  "release_date": "2026-11-11",
+  "integration_mode": "frozen inference-time regulatory prior",
+  "api_status": "not_configured",
+  "api_key_present": false,
+  "usage_scope": "noncommercial_research",
+  "training_use_of_api_outputs": false,
+  "local_conditioning_source": {
+    "dataset": "10x 20k BMMNC 5' HT v2",
+    "raw_integer_umi_available": true,
+    "ensembl_ids_available": true,
+    "stage_counts": {
+      "HSC": 24,
+      "CLP": 1,
+      "pro-B": 2,
+      "pre-B": 3,
+      "immature B": 32,
+      "mature B": 1403
+    }
+  },
+  "stage_requests": {
+    "HSC": "baseline_only",
+    "CLP": "exploratory_locus_priming; below recommended conditioning size",
+    "pro-B": "IGH prior; below recommended conditioning size",
+    "pre-B": "IGK/IGL prior; below recommended conditioning size",
+    "immature B": "IGK/IGL receptor-editing prior; conditioning size adequate",
+    "mature B": "RAG-off negative control"
+  },
+  "requested_modalities": [
+    "SC_ATAC",
+    "CHIP_HISTONE",
+    "METHYLATION",
+    "CONTACT_MAPS",
+    "SC_GENE_EXPRESSION_DENOISED"
+  ],
+  "claim_status": "architecture implemented; accuracy gain not yet validated",
+  "blocking_evidence": [
+    "No AlphaGenome 2 API key is configured.",
+    "Current pro-B and pre-B conditioning groups contain fewer than the recommended 16 cells.",
+    "Current VDJ file contains filtered productive contigs and lacks generation failures.",
+    "No paired scATAC, personalized IG haplotype or genomic VDJ is available locally."
+  ]
+}

@@ -24,15 +24,14 @@ negative control on the atlas, not a defect in it.
 
 Scope of what was extracted
 ---------------------------
-The shipped reference contains **cell-type composition only** — counts and
-proportions over all 577,677 cells, from the Census ``obs`` table.  The
-per-cell-type **expression matrix was not extracted**: the gene panel in
-``scripts/fetch_spleen_census.py`` resolves cleanly (77/77 genes) but
-reading expression for scattered cell coordinates out of a 159-million-cell
-SOMA array was too slow to finish in the session that built this package.
-No module in ``spleen_twin`` depends on it; marker-gene evidence for the
-annotations would be supporting detail, not a parameter source.  Running
-the script end to end regenerates both halves.
+The shipped package reference contains **cell-type composition** — counts and
+proportions over all 577,677 cells, from the Census ``obs`` table.  A verified
+110-cell-type by 77-gene expression summary is staged in ``data/`` alongside
+its provenance; it is deliberately not copied into the runtime reference
+until marker-to-parameter calibration and cross-study validation are defined.
+No module in ``spleen_twin`` silently treats marker expression as a parameter.
+Running ``scripts/fetch_spleen_census.py`` regenerates both composition and
+expression staging artifacts.
 
 To regenerate the reference, see ``scripts/fetch_spleen_census.py``.
 """

@@ -130,7 +130,7 @@ with the reason.
 ## Install
 
 ```bash
-git clone https://github.com/<user>/spleen-twin
+git clone https://github.com/zhu-algorithm/spleen-twin
 cd spleen-twin
 pip install -e .
 ```
@@ -180,6 +180,22 @@ with the selection term derived and its ablation measured.
 
 ![affinity maturation model](docs/affinity_maturation_model.png)
 
+### Regulatory-aware AI maturation
+
+The optional multimodal contract combines a GeneFormer-X cell/regulatory
+encoder, a paired IGH–IGK/IGL V(D)J sequence model, conditional diffusion,
+an AlphaFold-like complex-structure backend and a separately calibrated
+affinity head. AlphaFold confidence is used as a structural gate, never as a
+KD substitute. See
+[`docs/geneformer-vdj-structure-diffusion.md`](docs/geneformer-vdj-structure-diffusion.md)
+and `spleen_twin.modules.ai_maturation`.
+
+AlphaGenome 2 can optionally provide stage-specific regulatory weights for
+IGH/IGK/IGL segment choice before the V(D)J event is generated. It changes
+segment sampling only; OLGA still models deletion and P/N insertion, and
+AlphaFold remains downstream of a productive paired receptor. See
+[`docs/alphagenome2-vdj-integration.md`](docs/alphagenome2-vdj-integration.md).
+
 ## Atlas grounding
 
 Organ composition is measured, not assumed. `spleen_twin.organ.load_reference()`
@@ -201,11 +217,10 @@ returns the human spleen slice of CELLxGENE Census 2025-11-08
 settings, so the single most consequential parameter — how many centrocytes
 can be rescued per cycle — comes from data rather than from tuning.
 
-**What was not extracted:** the per-cell-type expression matrix. The 77-gene
-panel in `scripts/fetch_spleen_census.py` resolves cleanly, but reading
-expression for scattered cell coordinates out of a 159-million-cell SOMA array
-did not finish in the session that built this package. No module depends on it;
-running the script end to end regenerates it.
+The staged 77-gene expression summaries are available in
+`data/spleen_expression_mean.csv` and `data/spleen_expression_fracpos.csv`,
+with provenance in `data/spleen_census_provenance.json`. They are retained as
+calibration inputs rather than silently converted into simulation parameters.
 
 ## Limitations
 

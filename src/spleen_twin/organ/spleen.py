@@ -30,6 +30,7 @@ import numpy as np
 
 from ..modules.activation import ActivationFate, ActivationModule
 from ..modules.affinity import AffinityOracle, SurrogateAffinityOracle, paratope_from
+from ..modules.alphagenome_vdj import AlphaGenome2VDJPrior
 from ..modules.antigen import Antigen
 from ..modules.apc import AntigenPresentingCompartment
 from ..modules.csr import ISOTYPE_HALF_LIFE_DAYS, ClassSwitchModule
@@ -90,6 +91,7 @@ class Spleen:
         pair_light_chains: bool = True,
         light_locus_probability_kappa: float = 0.60,
         max_light_edit_attempts: int = 3,
+        regulatory_priors: Optional[dict[tuple[str, str], AlphaGenome2VDJPrior]] = None,
     ) -> None:
         self.rng = np.random.default_rng(seed)
         self.seed_value = seed
@@ -100,6 +102,7 @@ class Spleen:
         self.light_lambda = ChainRecombinator("IGL", rng=self.rng) if pair_light_chains else None
         self.light_locus_probability_kappa = light_locus_probability_kappa
         self.max_light_edit_attempts = max_light_edit_attempts
+        self.regulatory_priors = dict(regulatory_priors or {})
         self.annotator = ImgtAnnotator()
         self.shm = HypermutationEngine(rng=self.rng)
         self.apc = AntigenPresentingCompartment(rng=self.rng)
@@ -125,6 +128,15 @@ class Spleen:
                 "pair_light_chains": self.pair_light_chains,
                 "light_locus_probability_kappa": self.light_locus_probability_kappa,
                 "max_light_edit_attempts": self.max_light_edit_attempts,
+                "regulatory_priors": {
+                    f"{stage}:{locus}": {
+                        "status": prior.status.value,
+                        "model_version": prior.model_version,
+                        "input_sha256": prior.input_sha256,
+                        "output_sha256": prior.output_sha256,
+                    }
+                    for (stage, locus), prior in self.regulatory_priors.items()
+                },
                 "gc_kwargs": self.gc_kwargs,
             },
             parameters=[
@@ -137,10 +149,17 @@ class Spleen:
             inputs={},
         )
 
+    def _regulatory_weights(self, stage: str, locus: str) -> dict[str, float]:
+        prior = self.regulatory_priors.get((stage, locus))
+        return {} if prior is None else prior.segment_weights()
+
     def _productive_light(self, reason: str = "initial"):
         locus = "IGK" if self.rng.random() < self.light_locus_probability_kappa else "IGL"
         recombinator = self.light_kappa if locus == "IGK" else self.light_lambda
-        r = recombinator.rearrange_productive()
+        stage = "immature B" if reason == "self_reactivity" else "pre-B"
+        r = recombinator.rearrange_productive(
+            segment_weights=self._regulatory_weights(stage, locus)
+        )
         return r, EditingEvent(0, locus, r.v_gene, r.j_gene, reason, r.productive)
 
     def _attach_light(self, cell: BCell, light, history: list[EditingEvent]) -> None:
@@ -170,7 +189,9 @@ class Spleen:
 
         while len(pool) < n_cells and attempted < n_cells * 60:
             attempted += 1
-            r = self.recombinator.rearrange()
+            r = self.recombinator.rearrange(
+                segment_weights=self._regulatory_weights("pro-B", "IGH")
+            )
             if not pre_bcr_checkpoint(r):
                 continue
             productive += 1

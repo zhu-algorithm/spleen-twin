@@ -1,0 +1,58 @@
+{
+  "schema_version": "geneformer-stage-pilot-1",
+  "status": "trained_pilot_not_validated",
+  "base_model": "ctheodoris/Geneformer Geneformer-V1-10M",
+  "base_model_license": "Apache-2.0",
+  "base_model_sha256": "a5e33a757431643b3697de7ef6127950cdc49e06e58d4266b3a3ab191b683f14",
+  "training_corpus_sha256": "c18b793942002d860388b9e8da4e16889ec2b7e9e5e3928035829ba88757f7b8",
+  "cells_used": 190,
+  "class_counts": {
+    "mature B": 128,
+    "immature B": 32,
+    "HSC": 24,
+    "pro-B": 2,
+    "pre-B": 3,
+    "CLP": 1
+  },
+  "embedding_dimensions": 256,
+  "regulatory_features": [
+    "RUNX1",
+    "GATA2",
+    "MECOM",
+    "HOXA9",
+    "IKZF1",
+    "TCF3",
+    "BCL11A",
+    "EBF1",
+    "PAX5",
+    "RAG1",
+    "RAG2",
+    "DNTT",
+    "FOXO1",
+    "BACH2",
+    "SPIB",
+    "VPREB1",
+    "IGLL1",
+    "AICDA"
+  ],
+  "max_sequence_length": 512,
+  "head": "standardized balanced multinomial logistic regression",
+  "metrics": {
+    "kind": "resubstitution_only_not_generalization",
+    "balanced_accuracy": 0.99609375,
+    "macro_f1": 0.9905610288478556
+  },
+  "artifacts": {
+    "stage_head": "data/external/models/geneformer-stage-pilot/stage_head.joblib",
+    "stage_head_sha256": "3a4ed5c72d28b3eda4914d82512eb16dcdf23c218d7110756cb2d2640267732e",
+    "embeddings": "data/external/models/geneformer-stage-pilot/training_embeddings.npz",
+    "embeddings_sha256": "0702bffb28281f11b9a0f33e941045377dd23613db6bd4a96c1671c8449264d6"
+  },
+  "limitations": [
+    "Stage labels are marker-derived pseudo-labels.",
+    "Rare early stages are too small for held-out six-class evaluation.",
+    "Metrics are training-set fit diagnostics and must not be reported as predictive performance.",
+    "This pilot freezes Geneformer and trains only a regulatory-aware stage head.",
+    "No AlphaFold structure was generated or used as an affinity label."
+  ]
+}

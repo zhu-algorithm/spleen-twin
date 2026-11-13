@@ -1,0 +1,31 @@
+{
+  "schema_version": "virtual-bone-marrow-training-1",
+  "source": "10x 20k BMMNC 5' HT v2",
+  "matrix_sha256": "b6f5b9208cd3c5490b712e8ba214f075f300eac724575f26779ee6e6f593c69d",
+  "vdj_sha256": "5e1f9ed50e9b0f6c5bdd4f4dea2325150cb77289cc67cfbcea656b2f3421f99a",
+  "output": "data/external/bone_marrow/10x_20k_bmmnc_5p_ht_v2/virtual_cell_training.jsonl",
+  "output_sha256": "c18b793942002d860388b9e8da4e16889ec2b7e9e5e3928035829ba88757f7b8",
+  "label_source": "marker_heuristic_v1",
+  "labels_are_curated": false,
+  "stage_counts": {
+    "mature B": 1403,
+    "immature B": 32,
+    "HSC": 24,
+    "pro-B": 2,
+    "pre-B": 3,
+    "CLP": 1
+  },
+  "paired_bcr_counts": {
+    "mature B": 1370,
+    "immature B": 32
+  },
+  "training_examples": 1465,
+  "structure_records": 0,
+  "affinity_records": 0,
+  "structure_status": "not_run: no AlphaFold-compatible backend/artifacts configured",
+  "limitations": [
+    "Stages are conservative marker-based pseudo-labels, not curated annotations.",
+    "Filtered VDJ contigs contain productive receptors and cannot train nonproductive rearrangement.",
+    "AlphaFold confidence is not an affinity label and no structure values were fabricated."
+  ]
+}
